@@ -1,0 +1,48 @@
+\index{dpss@\texttt{dpss}!executable}
+Currently, only the \texttt{dpss} module has been implemented as a command-line executable.  The binary prints the sequences and eigenvalues directly to the terminal.  On Unix-based systems, this output can be re-directed to a file in the standard way.  The format of the output is compatible with a \textsc{Matlab}/Octave script file, producing the two arrays: \code{dps_seq} for the sequences, and \code{lambda} for the eigenvalues.  The following is the help file, which can be accessed with \texttt{dpss --help}:
+{\small
+\begin{verbatim}
+  Usage: dpss n nW [[seql] sequ] [interp_method [interp_base]] [trace]
+
+  `dpss' calculates and prints a set of "discrete prolate spheroidal sequences"
+  (aka Slepian Sequences) and their corresponding concentrations of energy in
+  the normalized bandwidth [-W, W].  These sequences are typically used in 
+  multitaper spectral analysis.
+
+  Examples:
+  dpss 12 3 2        returns the first two DPSSs of length 12 and time-bandwidth
+                     product nW=3, along with their concentrations.
+  dpss 12 3 3 5      returns the third through fifth DPSSs and concentrations.
+  dpss 8388608 2.5 spline 32768   calculates the first five DPSSs of length 2^15,
+                                  nW=2.5, then interpolates to length 2^23 using 
+                                  natural cubic splines, re-normalizes and
+                                  estimates the new energy concentrations.
+
+  Required Parameters:
+    n     Length of the dpss sequences to be computed
+    nW    Time-bandwidth product for the sequences.  By definition, the first
+          dpss maximizes the concentration of energy in the normalized frequency 
+          range f in [-W,W]. Typical values are nW = 2, 2.5, 3, 3.5 and 4.
+
+  Optional Parameters:
+    sequ             The index of the upper dpss to be calculated.  Indices must
+                     fall in the range [1, N].  If `seql' is not defined, then
+                     this is the total number of sequences.  By default,
+                     sequ = floor(2nW). 
+    seql             The index of the lower dpss to be calculated.  This must
+                     fall in the range [1, sequ].
+    interp_method    Interpolation method to employ when creating the sequences.
+                     By default, dpss will calculate sequences up to length
+                     n = 2^17-1 without interpolation.  For larger sequences, 
+                     intermediate values must be interpolated.  Accepted methods
+                     are `linear' and `spline' (without quotes).  By default,
+                     interp_method=spline, which uses natural cubic splines.
+    interp_base      Length of the sequences from which to interpolate.  An 
+                     interpolation method must be supplied to use this option.
+                     By default, interp_base = min( n, 2^17-1 ).
+    trace            trace = `trace' (without quotes) prints the method and 
+                     computation parameters to the command window.
+
+  See the `mtpsd' Documentation for further details.
+\end{verbatim}
+}

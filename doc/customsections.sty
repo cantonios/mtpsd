@@ -1,0 +1,104 @@
+%================================================================================
+%   CHAPTER DEFINITION
+%================================================================================
+
+% \renewcommand\chapter{\if@openright\cleardoublepage\else\clearpage\fi
+%                     \global\@topnum\z@
+%                     \@afterindentfalse
+%                     \secdef\@chapter\@schapter}
+% %normal chapter
+% \def\@chapter[#1]#2{\ifnum \c@secnumdepth >\m@ne
+%                          \refstepcounter{chapter}%
+%                          \typeout{\@chapapp\space\thechapter.}%
+%                          \addcontentsline{toc}{chapter}%
+%                                    {\protect\numberline{\thechapter}#2}%
+%                     \else
+%                       \addcontentsline{toc}{chapter}{#1}%
+%                     \fi
+% 		    \thispagestyle{plain}%
+%                     \chaptermark{#1}%
+%                     \addtocontents{lof}{\protect\addvspace{10\p@}}%
+%                     \addtocontents{lot}{\protect\addvspace{10\p@}}%
+%                     \if@twocolumn
+%                       \@topnewpage[\@makechapterhead{#2}]%
+%                     \else
+%                       \@makechapterhead{#2}%
+%                       \@afterheading
+%                     \fi}
+% %normal chapter head
+% \def\@makechapterhead#1{%
+%   { \let\oldparskip\parskip
+%     \setlength{\parskip}{0in}
+%     \parindent \z@ \raggedleft \normalfont
+%     \ifnum \c@secnumdepth >\m@ne
+%         \normalsize \MakeUppercase{\@chapapp}\hspace*{1ex} \LARGE\thechapter
+%         \par\nobreak
+%         \vskip 30\p@
+%     \fi
+%     \interlinepenalty\@M
+% 
+%     \hrule\vskip 3mm \mbox{\Large\sc #1} \hspace*{5pt}\par\nobreak\vskip 3mm \hrule
+%     \vskip 30\p@
+%     %\par
+%     \setlength{\parskip}{\oldparskip}
+%   }}
+% %contents chapter
+% \def\@schapter#1{\if@twocolumn
+%                    \@topnewpage[\@makeschapterhead{#1}]%
+%                  \else
+%                    \@makeschapterhead{#1}%
+%                    \@afterheading
+%                  \fi
+% 		 \thispagestyle{plain}%
+%                  \chaptermark{#1}
+%                 }
+% %contents chapter head
+% \def\@makeschapterhead#1{%
+%   {\let\oldparskip\parskip
+%     \setlength{\parskip}{0in}
+%     \parindent \z@ \raggedleft \normalfont
+%     \hrule\vskip 3mm \mbox{\Large\sc #1} \hspace*{5pt}\par\nobreak\vskip 3mm \hrule
+%     \vskip 30\p@
+%     %\par
+%     \setlength{\parskip}{\oldparskip}
+%   }}
+
+%============================================================================================
+% Sections
+%============================================================================================
+
+\renewcommand\section{\@startsection {section}{1}{\z@}%
+                                    {-3.2ex \@plus -1ex \@minus -.2ex}%
+                                   {1.8ex \@plus.2ex}%
+                                   {\normalfont\large\bfseries} }
+
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}%
+                                     {-3.25ex\@plus -1ex \@minus -.2ex}%
+                                     {1.5ex \@plus .2ex}%
+                                     {\normalfont\large\bfseries}}
+\renewcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}%
+                                     {-3.25ex\@plus -1ex \@minus -.2ex}%
+                                     {1.5ex \@plus .2ex}%
+                                     {\normalfont\normalsize\bfseries}}
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+                                    {3.25ex \@plus1ex \@minus.2ex}%
+                                    {-1em}%
+                                    {\normalfont\normalsize\bfseries}}
+\renewcommand\subparagraph{\@startsection{subparagraph}{5}{\parindent}%
+                                       {3.25ex \@plus1ex \@minus .2ex}%
+                                       {-1em}%
+                                      {\normalfont\normalsize\bfseries}}
+
+
+%TO AVOID TITLE CONFLICTS WITH STUPID tocloft PACKAGE
+
+% \renewcommand{\@cftmaketoctitle}{ \@schapter{\contentsname}}
+% \renewcommand{\@cftmakeloftitle}{ \@schapter{\listfigurename}}
+% \renewcommand{\@cftmakelottitle}{ \@schapter{\listtablename}}
+% \renewcommand{\@pnumwidth}{5ex}
+% 
+% \makeatletter
+% \renewcommand*\env@matrix[1][c]{\hskip -\arraycolsep
+%   \let\@ifnextchar\new@ifnextchar
+%   \array{*\c@MaxMatrixCols #1}}
+% \makeatother

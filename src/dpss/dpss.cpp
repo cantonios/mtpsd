@@ -334,7 +334,7 @@ void fix_workspace(dpss_workspace& work){
     
     if ( ( work.n > MAX_N ) && ( work.interp_method == NONE ) ){
         work.interp_method=SPLINE;
-        work.interp_base = min<uint_t>( MAX_N, work.interp_base );
+        work.interp_base = tmath::min<uint_t>( MAX_N, work.interp_base );
     }
 
     //turn off (on) interpolation if not (is) required.
@@ -348,8 +348,8 @@ void fix_workspace(dpss_workspace& work){
         work.seql=work.sequ;
         work.sequ=tmp;
     }
-    work.sequ=max<uint_t>(min<uint_t>(work.sequ,work.interp_base-1),0);
-    work.seql=max<uint_t>(min<uint_t>(work.seql,work.interp_base-1),0);
+    work.sequ=tmath::max<uint_t>(tmath::min<uint_t>(work.sequ,work.interp_base-1),0);
+    work.seql=tmath::max<uint_t>(tmath::min<uint_t>(work.seql,work.interp_base-1),0);
     work.K=work.sequ-work.seql+1;
     
     //force nW to be between 1 and interp_base/2

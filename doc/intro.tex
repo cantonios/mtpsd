@@ -1,0 +1,17 @@
+The \texttt{mtpsd} library is designed to compute the multitaper power spectral density of a time-series.  The term \emph{time-series}\index{time-series} here simply refers to a sequence of ordered observations; they need not be measurements in physical time.  The \emph{power spectral density} (PSD)\index{power spectral density}, or simply \emph{spectrum}, of a signal is a decomposition of it's power in the frequency domain.  It is a density in that the integral between any two points represents the total power in that range.  The \emph{multitaper method}\index{multitaper method} is a technique for estimating the PSD of a signal, developed by Dr.~David J.~Thomson while he was working at Bell Laboratories.  It uses a series of tapers to produce a set of (approximately) uncorrelated estimates of the spectrum, which are averaged together in a way to reduce variance and bias.  
+
+The library described here contains all algorithms required to compute Thomson's multitaper estimate for a one-dimensional time-series (real or complex).  The package includes the following components:
+\smallskip
+
+\noindent \begin{tabular}{@{\hspace*{4ex}}lp{\textwidth-21ex}}
+    \texttt{libdpss.a} & Static library that provides methods for computing tapers.\\
+    \texttt{libmtpsd.a} & Static library that provides methods for computing the multitaper spectrum estimate of a time-series.  This includes \texttt{libdpss.a}.\\
+    \texttt{dpss.oct} & Octave dynamical extension to compute tapers.\\
+    \texttt{mtpsd.oct} & Octave dynamical extension to compute the multitaper spectrum estimate.\\
+    \texttt{dpss(.exe)} & A command-line binary for computing tapers.
+\end{tabular}
+\smallskip
+
+\noindent These components have been tested on both Windows and Linux.  The code is written in C++, and is freely available under GPLv3.
+
+The structure of this document is as follows.  An overview of the required theory is given in Section \ref{sec:theory}.  Refer to this section to see exactly how \texttt{mtpsd} computes the spectrum and the tapers involved.  In Section \ref{sec:package}, instructions are outlined for compiling and linking with the libraries using the GNU compiler suite.  This can be done on most Unix-based systems, and on Windows with MinGW.  The source-code documentation for the two libraries is found in Sections \ref{sec:mtpsd} and \ref{sec:dpss}.  A few extra helper routines are discussed in Section \ref{sec:otherroutines}.  In Section \ref{sec:octaveimp}, the two Octave dynamical extensions are presented, and in Section \ref{sec:cmdimp}, the command-line interface for the \texttt{dpss} module is described.

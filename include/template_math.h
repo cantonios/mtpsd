@@ -37,6 +37,10 @@ along with MTPSD.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef MTPSD_TEMPLATE_MATH
 #define MTPSD_TEMPLATE_MATH
 
+#include <complex.h>
+
+namespace tmath {
+
 //absolute value function
 template <class T> T abs ( T a ) { return (0<a)?a:-a; }
 template <class T> T max ( T a, T b ) { return (b<a)?a:b; }
@@ -110,6 +114,8 @@ template <class T> double mom2(const T *a, unsigned int n){
     
     return varsum/n; 
 } 
+
+}
 
 #else
 #warning template_math already loaded

@@ -32,6 +32,7 @@ along with MTPSD.  If not, see <http://www.gnu.org/licenses/>.
 
 #define AS_TOL 1e-6    //Accuracy of methods
 
+namespace stats {
 
 // Inverts chi-squared CDF with v degrees of freedom
 // to find percentage point x satisfying  P( chi^2_v < x ) = p
@@ -59,3 +60,5 @@ double gamma_int_series(double x, double n);
 
 // Computes incomplete gamma integral using continued fractions
 double gamma_int_fraction(double x, double n);
+
+}

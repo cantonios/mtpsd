@@ -1,0 +1,108 @@
+There are several objects and routines that are used by one or both of \texttt{mtpsd} and \texttt{dpss}, but are not specific to either.  This includes applied statistics algorithms, basic error classes, and general mathematics operations that can be applied to many data types.  These are described in the section.
+
+\subsection{ Applied Statistics: \texttt{applied\_stats.h}}
+
+In order to find confidence intervals of a multitaper spectrum estimate, one must be able to compute percentage points (quantiles) of $\chi^2_\nu$ distributions.  Best and Roberts \cite{best:chisquared} have written a Fortran algorithm to accomplish this for arbitrary degrees of freedom $\nu$ and percentage point $p$.  The algorithm depends on a lower incomplete gamma function, and the percentage point of a Gaussian random variable.  A method to compute the incomplete gamma integral is given by Bhattacharjee \cite{bhatt:gamma}, and the quantiles of a Gaussian RV by Odeh and Evans \cite{odeh:normal}.  These three routines have been modified slightly and translated to C++.  They are defined in \code{applied_stats.h}, which is automatically included by \texttt{mtpsd.h}.
+\medskip
+
+\begin{lstshortblock}
+double chisquared_inv( double p, double v )
+void chisquared_inv( double p, double *v, unsigned int nv, double *x )
+void chisquared_inv( double *p, double *v, unsigned int np, 
+                     unsigned int nv, double *x )
+\end{lstshortblock}
+\begin{fdescription}
+    Inputs: & \code{p, v}, (\code{np, nv})\\
+    Outputs: & \code{x}\\
+    & Computes the \code{p}$\times100\%$ percentage point of a $\chi^2_\nu$ distribution:
+      \[P\left( \chi^2_\nu < x \right) = p.\]
+      If \code{v} is an array of length \code{nv}, then the quantiles are stored in the array \code{x} (also of length \code{nv}).  If both \code{p} and \code{v} are arrays with respective lengths \code{np} and \code{nv}, then \code{x} is an \code{np}$\times$\code{nv} array in row-major format, where each row corresponds to the percentage points for a particular \code{p} and varying \code{v}.  The algorithm is based on Best and Roberts \cite{best:chisquared}.
+\end{fdescription}\index{chisquared_inv@\texttt{chisquared\_inv()}}
+\medskip
+
+\begin{lstshortblock}
+double gauss_inv(double p)
+\end{lstshortblock}
+\begin{fdescription}
+    Inputs: & \code{p}\\
+    & Computes the \code{p}$\times100\%$ percentage point of a standard Gaussian distribution with zero mean and unit variance: 
+      \[P\left( \mathcal{N}(0,1) < x \right) = p.\]
+      The algorithm is based on Odeh and Evans \cite{odeh:normal}.
+\end{fdescription}\index{gauss_inv@\texttt{gauss\_inv()}}
+\fdbottom
+\newpage
+
+\begin{lstshortblock}
+double gamma_int(double x, double n)
+double gamma_int_series(double x, double n)
+double gamma_int_fraction(double x, double n)
+\end{lstshortblock}
+\begin{fdescription}
+    Inputs: & \code{x, n}\\
+    & Computes the incomplete gamma integral
+    \[I(x,n)=\dfrac{1}{\Gamma(n)}\int_0^x e^{-t}t^{n-1}dt\]
+    using either a polynomial series expansion (\code{_series}) or continued fractions (\code{_fraction}).  The unspecialized \code{gamma_int} automatically selects which version to use based on the inputs.  This algorithm is based on Bhattacharjee \cite{bhatt:gamma}.
+\end{fdescription}\index{gamma_int@\texttt{gamma\_int()}}
+\fdbottom
+\vspace*{-0.5em}
+
+\subsection{ The Simple Error Class: \texttt{simple\_error.h} \label{sec:simpleerr}}
+
+Both the \texttt{dpss} and \texttt{mtpsd} libraries make use of the basic error class: \code{LAPACK_ERROR}, which is a child of \code{ERR}.  Specifically, the two eigenvalue routines \code{eig_rrr()}\index{eig\_rrr@\texttt{eig\_rrr()}} and \code{eig_iit()}\index{eig\_iit@\texttt{eig\_iit()}} throw an \code{LAPACK_ERROR} if the error status of the respective LAPACK routines is non-zero.  This error contains a brief message indicating the specific procedure that failed.  An error from one of these two routines will propagate down to the following:
+\begin{verbatim}
+    dpss_calc( ... )
+    dpss::compute()
+    mtpsd::compute()
+\end{verbatim}
+\index{dpss class@\texttt  {dpss} class!compute@\texttt{compute()}}\index{mtpsd class@\texttt  {mtpsd} class!compute@\texttt{compute()}}\index{dpss\_calc@\texttt{dpss\_calc()}}
+Thus, if you wish to gracefully handle the error, these three routines should be contained within \code{try} blocks.  \code{LAPACK_ERROR} is derived from the \code{ERR} class, so both can be caught with \code{catch(ERR)}.  Listing \ref{lst:simpleerr} shows the definition of the two classes.
+\smallskip
+
+\begin{lstlisting}[label=lst:simpleerr,caption=The simple error classes ]
+// Basic error class
+class ERR{
+    ERR();
+    ERR(const char *msg);       //sets error message
+    void getmsg(char *errmsg);  //copies error message to errmsg
+    const char *getmsg();       //returns pointer to error message
+};
+
+// Inherits from ERR
+class LAPACK_ERROR : public ERR{
+    LAPACK_ERROR();
+    LAPACK_ERROR(const char *errmsg);
+};
+\end{lstlisting} \index{ERR class@\texttt{ERR} class}\index{LAPACK_ERROR class@\texttt{LAPACK\_ERROR} class}
+\medskip
+
+\noindent One of these simple errors can be thrown with: \lstquick{throw ERR("My error message")}.
+
+
+\subsection{General Mathematics Templates: \texttt{template\_math.h}}
+
+Some general mathematics routines are needed by both the \texttt{mtpsd} and \texttt{dpss} libraries, and need to be able to handle a variety of input types.  These are written in the header \texttt{template\_math.h}, which is automatically included by both \texttt{mtpsd.h} and \texttt{dpss.h}.  Table \ref{tbl:templatemath} lists all the available functions, as well as a brief description of each.
+\bigskip
+
+\begin{table}[!hb]
+    \centering
+    \caption[Math template functions]{Description of the template functions in \texttt{template\_math.h}. \label{tbl:templatemath}}
+    \vspace*{-0.5em}
+
+    \noindent \begin{tabular}{@{}c@{}}
+        \hline\hline\\
+        \parbox{\textwidth}{
+            \templatecode{template <class T>}{T}{abs( T a )}{Returns the maximum of +\code{a} and -\code{a}.  This does not compute a complex norm.}
+            \templatecodecont{template <class T>}{T}{max( T a, T b )}{Returns the maximum of \code{a} and \code{b}.}
+            \templatecodecont{template <class T>}{T}{min( T a, T b )}{Returns the minimum of \code{a} and \code{b}.}
+            \templatecodecont{template <class T>}{T}{sum( const T *a, unsigned int n )}{ Returns the sum of the \code{n} elements in \code{a}.}
+            \templatecodecont{template <class T>}{T}{mean( const T *a, unsigned int n )}{ Returns the mean of the \code{n} elements in \code{a}.  If \code{T} is an integer type, this mean will be truncated.}
+            \templatecodecont{template <class T>}{double}{var( const T *a, unsigned int n )}{Returns the variance (second central moment) of the \code{n} elements in \code{a}.}\index{var@\texttt{var()}}
+            \templatecodecont{template <class T>}{double}{mom2( const T *a, unsigned int n )}{Returns the second (non-central) moment of the \code{n} elements in \code{a}: $\sum\texttt{a[i]*}\overline{\texttt{a[i]}}/\texttt{n}$}\index{mom2@\texttt{mom2()}}
+            \templatecodecont{template <class T>}{void}{scale( const T *a, double b, unsigned int n, T *ab)}{Scales the length-\code{n} array \code{a} by the constant \code{b}.  The result is stored in \code{ab}.}
+            \templatecode{template <class A, class B>}{A}{wmean( const A *a, const B *wts, unsigned int n )}{ Returns the weighted mean: $\left(\sum\texttt{wts[i]}\right)^{-1}\sum\texttt{a[i]*wts[i]}.$\\  If \code{A} is an integer type, this mean will be truncated.}
+            \templatecodecont{template <class A, class B>}{A}{dot\_mult( const A *a, const B *b, unsigned int n )}{ Returns the dot-product of the two length-\code{n} arrays \code{a} and \code{b}.}
+            \templatecodecont{template <class A, class B>}{void}{pw\_mult( const A *a, const B *b, unsigned int n, A *ab )}{ Performs a point-wise multiplication of the two length-\code{n} arrays \code{a} and \code{b}.  The result is stored in \code{ab}.}
+        }\\
+        \hline
+    \end{tabular}
+\end{table}

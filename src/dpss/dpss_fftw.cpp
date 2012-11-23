@@ -79,11 +79,11 @@ void compute_energy_concentrations(double *h,uint_t n, uint_t K, double nW, doub
     
         //transform, point-wise multiply, then inverse transform
         fftw_execute(p);
-        pw_mult<fftw_complex,fftw_complex>(EV,KERN,n+1,EV);
+        tmath::pw_mult<fftw_complex,fftw_complex>(EV,KERN,n+1,EV);
         fftw_execute(pi);
-        scale<double>(ev,1.0/2.0/n,n,ev);  //rescale ifft
+        tmath::scale<double>(ev,1.0/2.0/n,n,ev);  //rescale ifft
         
-        lambda[ii]=dot_mult<double,double>(ev,&h[ii*n],n);
+        lambda[ii]=tmath::dot_mult<double,double>(ev,&h[ii*n],n);
         
         //fix round-off
         if (lambda[ii]>1) lambda[ii]=1;

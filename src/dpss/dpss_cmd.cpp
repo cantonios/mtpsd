@@ -138,7 +138,7 @@ void print_workspace(dpss_workspace work, char *prepend, char *append, char topc
         sprintf(line[li++],"    Energy: Concentrations calculated using FFTs (FFTW)");
 
     for (int ii=0; ii<li; ii++)
-        lmax=max<int>(lmax,strlen(line[ii]));
+        lmax=tmath::max<int>(lmax,strlen(line[ii]));
     
     int nprep, napp;
     nprep=strlen(prepend); 
@@ -246,7 +246,7 @@ dpss_workspace cmd_parse_args(char *inargs[], int nargin){
                 
                 if (str_to<uint_t>(inargs[ii],tmp)){
                     args.seql=0;                //assume only upper bound given by default
-                    args.sequ=max<uint_t>(tmp,1)-1;            //adjust so that numbers start at zero
+                    args.sequ=tmath::max<uint_t>(tmp,1)-1;            //adjust so that numbers start at zero
                     ii++;
                 }
                 else 
@@ -258,7 +258,7 @@ dpss_workspace cmd_parse_args(char *inargs[], int nargin){
             case SEQU:
                 if (str_to<uint_t>(inargs[ii],tmp)){
                     args.seql=args.sequ;               //assume only one number given by default
-                    args.sequ=max<uint_t>(tmp,1)-1;    //adjust so that numbers start at zero
+                    args.sequ=tmath::max<uint_t>(tmp,1)-1;    //adjust so that numbers start at zero
                     ii++;
                 }
                 iarg++;

@@ -96,11 +96,11 @@ void fix_workspace(mtpsd_workspace &work){
     
     if ( work.K > work.n || work.K < 2)
         work.K=floor(2*work.nW)-1;
-    work.K=max<uint_t>(work.K,2);       //require at least two sequences
+    work.K=tmath::max<uint_t>(work.K,2);       //require at least two sequences
     
     if (work.Fs<0) work.Fs=1;    
     
-    work.N=max<uint_t>(work.N, work.n);
+    work.N=tmath::max<uint_t>(work.N, work.n);
     
     if (work.weight_method==ADAPT)
         work.nwk=work.N;
@@ -273,9 +273,9 @@ void mtpsd<T>::compute(){
     
     double varx;
     if (this->info.remove_mean == true)
-        varx = var<T>(this->x,this->info.n);
+        varx = tmath::var<T>(this->x,this->info.n);
     else
-        varx = mom2<T>(this->x,this->info.n);
+        varx = tmath::mom2<T>(this->x,this->info.n);
     
     //compute individual eigenspectra
     eigencoeffs<T>(this->x,this->info.n, this->h, this->l, this->info.K, this->info.remove_mean, this->info.N, this->Jk);
@@ -294,7 +294,7 @@ void mtpsd<T>::compute(){
                 this->wk[ii]=1.0/this->info.K;
         }
         else{
-            double lsum=sum<double>(this->l, this->info.K);
+            double lsum=tmath::sum<double>(this->l, this->info.K);
             for ( uint_t ii=0; ii<this->info.K; ii++)
                 this->wk[ii]=this->l[ii]/lsum;            
         }
@@ -305,8 +305,8 @@ void mtpsd<T>::compute(){
     }
     
     //scale for non-unit Fs
-    scale<double>(this->S, 1.0/this->info.Fs,this->info.N, this->S);
-    scale<fftw_complex>(this->Jk, 1.0/sqrt(this->info.Fs), this->info.N*this->info.K, this->Jk);
+    tmath::scale<double>(this->S, 1.0/this->info.Fs,this->info.N, this->S);
+    tmath::scale<fftw_complex>(this->Jk, 1.0/sqrt(this->info.Fs), this->info.N*this->info.K, this->Jk);
     
 }
 
@@ -420,7 +420,7 @@ double mtpsd<T>::taper(uint_t k, uint_t i){
 template <class T>
 void eigencoeffs(T *x, uint_t n, const double *tapers, const double *lambda, uint_t K, bool remove_mean, uint_t N, fftw_complex *Jk){
         
-    T m=mean<T>(x,n);       //computes standard mean
+    T m=tmath::mean<T>(x,n);       //computes standard mean
     
     double tmp;             //temporary variable
     T wm;                   //weighted mean
@@ -431,11 +431,11 @@ void eigencoeffs(T *x, uint_t n, const double *tapers, const double *lambda, uin
     for ( uint_t ii=0; ii<K; ii++){
         
         if (remove_mean==true){
-            tmp=sum<double>(&tapers[ii*n],n);
+            tmp=tmath::sum<double>(&tapers[ii*n],n);
         
             //tmp should be near zero for odd tapers (but due to round-off may not be exactly zero)
-            if (  abs<double>(tmp) > ZERO_TOL ){
-                wm=dot_mult<T,double>(x,&tapers[ii*n],n);
+            if (  tmath::abs<double>(tmp) > ZERO_TOL ){
+                wm=tmath::dot_mult<T,double>(x,&tapers[ii*n],n);
                 wm=wm/tmp;
             }
             else {
@@ -455,7 +455,7 @@ void eigencoeffs(T *x, uint_t n, const double *tapers, const double *lambda, uin
     
     //Window the data
     for ( uint_t ii=0; ii<K; ii++){
-        pw_mult<fftw_complex,double>(&Jk[ii*N], &tapers[ii*n], n, &Jk[ii*N] );
+        tmath::pw_mult<fftw_complex,double>(&Jk[ii*N], &tapers[ii*n], n, &Jk[ii*N] );
         //zero-pad rest of array
         for (uint_t jj=n; jj<N; jj++){
             Jk[ii*N+jj]=0;
@@ -648,7 +648,7 @@ void combine_eig_spec( const double *Sk, uint_t K, uint_t N, const double *wk, u
             iwt=jj*nwk+(ii%nwk);
             S[ii]=S[ii]+wk[iwt]*Sk[jj*N+ii];   //weighted average
         }
-        absdiff=abs<double>(S[ii]-Sl);          //absolute difference
+        absdiff=tmath::abs<double>(S[ii]-Sl);          //absolute difference
         diff=diff+absdiff;
     }
     
@@ -672,7 +672,7 @@ void combine_eig_coeffs( const fftw_complex *Jk, uint_t K, uint_t N, const doubl
             iwt=jj*nwk+(ii%nwk);
             S[ii]=S[ii]+wk[iwt]*Sk;   //weighted average
         }
-        absdiff=abs<double>(S[ii]-Sl);          //absolute difference
+        absdiff=tmath::abs<double>(S[ii]-Sl);          //absolute difference
         diff=diff+absdiff;
     }
     
@@ -707,7 +707,7 @@ double confidence_factor(CONF_BOUND side, double p, double v){
     else
         p_in=(1.0+p)/2.0;
     
-    double Qc=chisquared_inv(p_in, v);      //quantile
+    double Qc=stats::chisquared_inv(p_in, v);      //quantile
     
     return v/Qc;
     
@@ -722,8 +722,8 @@ double F_statistic(uint_t ii, fftw_complex *Jk, uint_t N, uint_t K, double *wk, 
     
     for ( uint_t jj=0; jj< K; jj++){
         ak = sqrt( wk[jj*nwk + ii%nwk] );       // preserves relative weights in estimate of S
-        H0[jj] = sum<double>( &h[jj*n], n ) ;
-        if (abs<double>(H0[jj])<ZERO_TOL) H0[jj]=0;     // zeroes out small values
+        H0[jj] = tmath::sum<double>( &h[jj*n], n ) ;
+        if (tmath::abs<double>(H0[jj])<ZERO_TOL) H0[jj]=0;     // zeroes out small values
         tmp=H0[jj]*H0[jj]*ak;
         aH02 += tmp;
         a2H02+= tmp*ak;
@@ -798,8 +798,8 @@ void confidence_interval( double p, double *S, uint_t N, double *v, uint_t nv, d
  
     uint_t pp_start=N-nv;       //temporarily stores quantile information in Sc (ensuring not to be overwritten)
     
-    chisquared_inv((1.0-p)/2.0, v, nv, &Sc[pp_start]);   //lower quantile
-    chisquared_inv((1.0+p)/2.0, v, nv, &Sc[pp_start+N]); //upper quantile
+    stats::chisquared_inv((1.0-p)/2.0, v, nv, &Sc[pp_start]);   //lower quantile
+    stats::chisquared_inv((1.0+p)/2.0, v, nv, &Sc[pp_start+N]); //upper quantile
     
     uint_t ipp;                 //used to calculate index of quantile
     

@@ -1,0 +1,196 @@
+\index{Octave dynamical extensions|(}
+
+GNU \href{http://www.gnu.org/software/octave/}{Octave} is a very power computational tool for solving numerical problems.  It is most often compared to the widely used commercial product \textsc{Matlab}.  The two are mostly compatible when it comes to functions and scripts (m-files).  Octave has two major advantages:
+\begin{itemize}
+    \item Octave is free (as all academic tools should be).
+    \item It is \emph{much} easier to program Octave dynamical extensions (oct-files) than \textsc{Matlab} executables (mex-files).
+\end{itemize}
+As with any open-source software, there are also disadvantages.  Not all the toolboxes available in \textsc{Matlab} have an equivalent in Octave.  Also, the support community is much smaller (although, for many problems, the \textsc{Matlab} solutions will work).
+
+In order to use the multitaper libraries in Octave, two dynamical extensions are provided: \texttt{mtpsd.oct} and \texttt{dpss.oct}.  These are written to be replacements of the \code{pmtm.m} and \code{dpss.m} functions in \textsc{Matlab}'s Signal Processing Toolbox.  
+
+\texttt{dpss.oct} is mostly compatible with \texttt{dpss.m}, with the exception of \textsc{Matlab}'s user-created database.  In \textsc{Matlab}, the interpolation routine selects a sequence from a user-created database as the base, whereas in this Octave version, the base sequence is always computed.  The syntax for both, however, is the same.  Both use the tridiagonal formulation, although \texttt{dpss.m} does not apply the even-odd splitting technique.  This Octave implementation has been found to be faster and more accurate (smaller $\|Ah_k-\lambda_kh_k\|$) than \textsc{Matlab}'s \texttt{dpss.m}, even at sizes as great as $2^{20}$, where it uses spline interpolation to generate the sequences.
+
+\texttt{mtpsd.oct} is \emph{not} compatible with \texttt{pmtm.m}.  This was a design choice because the two methods have different features.  By default, \texttt{mtpsd} will remove weighted means to reduce bias, but \texttt{pmtm} will not.  \texttt{mtpsd} will \emph{always} return a two-side spectrum, whereas \texttt{pmtm} will return a one-side spectrum if the data is real.  The F-test can be performed by \texttt{mtpsd}, but not by \texttt{pmtm}.  Also, there are issues with \code{pmtm} when non-equal weights are used (see the Preface for details).  These are corrected in \code{mtpsd}.
+
+The following two sections give the help files for \texttt{mtpsd.oct} and \texttt{dpss.oct}.  These can also be accessed using the \code{help} command in Octave.
+
+\subsection{\texttt{mtpsd.oct}}
+
+\index{mtpsd@\texttt{mtpsd}!Octave extension|(}
+\deftypefn  {Loadable Function} {\var{S} =} {mtpsd (\var{x}, \var{nW}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\var{x}, \var{nW}, \var{nseq}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\var{x}, \var{nW}, \var{nseq}, \var{NFFT}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\var{x}, \var{nW}, \var{nseq}, \var{NFFT}, \var{Fs}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\var{x}, \var{nW}, \var{nseq}, \var{NFFT}, \var{Fs}, \var{pc}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\var{x}, \var{nW}, \var{nseq}, \var{NFFT}, \var{Fs}, \var{pc}, \var{pf}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\var{x}, \var{h}, \var{l}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\var{x}, \var{h}, \var{l}, \var{NFFT}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\var{x}, \var{h}, \var{l}, \var{NFFT}, \var{Fs}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\var{x}, \var{h}, \var{l}, \var{NFFT}, \var{Fs}, \var{pc}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\var{x}, \var{h}, \var{l}, \var{NFFT}, \var{Fs}, \var{pc}, \var{pf}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\dots{}, \var{'method'}) }
+\deftypefnx {Loadable Function} {\var{S} =} {mtpsd (\dots{}, \var{'mean'}) }
+\deftypefnx {Loadable Function} {[\var{S}, \var{f}, \var{Sc}, \var{FT}, \var{Jk}, \var{wk}, \var{h}, \var{l}] =} {mtpsd (\dots{}) }
+\vspace{-0.5em}
+
+\noindent Uses Thomson's Multitaper (MT) method to estimate the Power Spectral Density (PSD) of a one-dimensional time-series. The method uses orthogonal tapers to obtain a set of uncorrelated spectrum estimates, called eigenspectra.  These are then combined either linearly (equal or eigenvalue weighting), or non-linearly (adaptive weighting) to form a single spectrum. The resulting estimate has been shown to have lower variance and broad-band bias properties than the classical periodogram [1]. 
+
+The data tapers are taken to be discrete prolate spheroidal sequences because of their desirable frequency characteristics. These sequences can be specified by their time-bandwidth product, \var{nW}, or can be supplied as column vectors of \var{h} with corresponding energy concentrations \var{l}.  The larger the value of \var{nW}, the larger the main lobe of the spectral windows.  See the \code{dpss} documentation for more details regarding their definition and calculation.
+
+A particular weighting method for the multitaper estimate can be specified by the \var{'method'} string, which can take the following values:
+\begin{texitable}
+    \item[\var{'equal'}] Each eigenspectrum is weighted equally.
+    \item[\var{'eigen'}] Each eigenspectrum is weighted by their energy concentration (eigenvalue).
+    \item[\var{'adapt'}] Thomson's adaptive weighting is used, minimizing the broad-band bias.
+\end{texitable}
+By default, \code{mtpsd} will use adaptive weighting.
+
+A confidence interval is computed if \var{Sc} is requested.  This interval is based on the assumption that the spectrum estimate follows a scaled chi-squared distribution, where the degrees of freedom is dependent on the eigenspectrum weights.  The width of the interval can be specified by the probability value \code{pc}.
+
+An F-test for significant frequencies is computed if \var{FT} is requested.  The significance level can be set with the probability value \var{pf}.  Note: for non-equal weightings, the implemented F-test is a modified version of that described in [1].  It has been generalized to include the non-equal weights. See the \code{mtpsd} library documentation [2] for further details.
+
+In order to reduce bias effects from constant terms, weighted means of the data are removed prior to computing each eigenspectrum.  These are never re-introduced, leaving estimation of the mean up to the user.  This behaviour can be overridden by including \var{'mean'} as the final input variable.
+\bigskip
+
+\noindent Input Variables:
+\begin{texitable}
+\item[\var{x}] One-dimensional time-series data (real or complex) of which to compute the power spectral density.
+\item[\var{nW}] The time-bandwidth product for the DPSSs.  Typical values are 2, 2.5, 3, 3.5 and 4.
+\item[\var{nseq}] The number of tapers to use.  The default value is $\lfloor 2nW \rfloor - 1$, since this is the number of DPSSs with energy concentrations close to one.
+\item[\var{NFFT}] The length of the FFT used in spectrum calculations.  The returned spectrum will consist of \var{NFFT} values at equally spaced frequencies.  The default value is \code{length}(\var{x}).
+\item[\var{Fs}] The sampling frequency.  The returned spectrum is evaluated in the Nyquist range [-Fs/2, Fs/2], beginning with the zero-frequency.  The default value is \var{Fs}=1.
+\item[\var{pc}] The width of the confidence interval.  The output \var{Sc} corresponds to the lower and upper limits of the $pc\times100$\% confidence interval, assuming \var{S} follows a scaled chi-squared distribution.  The default value is \var{pc}=0.95.
+\item[\var{pf}] The acceptance probability for the F-test.  If the F-statistic at a particular frequency exceeds the threshold, then the null-hypothesis (that the spectrum at f is caused by noise) is rejected at the $(1-pf)\times100$\% level. This indicates that the frequency is significant.  The default value is \var{pf}=0.95.
+\item [\var{h}] User-supplied data tapers.  These are typically the first few discrete prolate spheroidal sequences, and can be computed using the \code{dpss} function.  They must have the same length as the time-series, \var{x}.  Tapers are taken to be the columns of \var{h}.
+\item [\var{l}] Vector of energy concentrations for the user-supplied tapers.  This must have \var{nseq} entries, where \var{nseq} is the number of columns in \var{h}.  By definition, \var{l}(i) is the ratio of power in [-W, W] to total power for the i-th taper, where W is a normalized frequency defined by \var{nW}/\code{length}(\var{x}). 
+\item [\var{'method'}] The weight method used to combine the individual eigenspectra into a single estimate.  Valid entries are: \var{'equal'}, \var{'eigen'}, and \var{'adapt'}.
+\item [\var{'mean'}]  If specified, leaves the mean value in the data when computing the spectrum.  Otherwise, weighted means are removed (weighted by the tapers) prior to computing each eigenspectrum.  This is done to force the zero-frequency component to zero, eliminating any bias caused by constant terms.
+\end{texitable}
+
+\noindent If the empty vector, \code{[]}, is used for \var{nseq}, \var{NFFT}, \var{Fs}, \var{pc}, or \var{pf}, the default value is used.
+\bigskip
+
+\noindent Output Variables:
+
+\begin{texitable}
+    \item [\var{S}] The two-sided power spectral density estimate.  \var{S}(1) corresponds to the zero-frequency value.
+    \item [\var{f}] Vector of frequencies.  \var{f} is in the range [0, \var{Fs}].
+    \item [\var{Sc}] Confidence interval.  The first and second columns are the lower and upper bounds of the $pc\times100$\% confidence interval, respectively.  It is assumed that \var{S} follows a scaled chi-squared distribution.
+    \item [\var{FT}] The F-test results.  The first column is the F-statistic assuming the spectrum at each frequency is composed of noise, and the second column is the $pf\times100$\% acceptance threshold.  If \var{FT}(i,1) $>$ \var{FT}(i,2), then the i-th frequency is significant.  If adaptive weighting is used, the threshold may return \code{Inf}.  This occurs when the spectrum estimate is deemed to be strongly biased, and is based almost entirely on a single eigenspectrum.  Since they are dominated by bias, these frequencies are not significant, so the F-test still functions as expected.
+    \item [\var{Jk}]  The eigencoefficients.  These are formed by tapering the data and applying the FFT.  The eigenspectra are computed by squaring the complex norm: \var{Sk}=$\|$\var{Jk}$\|^2$.
+    \item [\var{wk}] The weight vectors.  \var{wk} has dimensions \var{NFFT}$\times$\var{nseq}.  The i-th row is the set of weights used to calculate the i-th value of the spectrum: \var{S}$(i)=\sum_k$\var{wk}$(i)\|$\var{Jk}$(i)\|^2$. 
+    \item [\var{h}] The data tapers, as columns.
+    \item [\var{l}] Row vector containing the energy concentrations of the tapers.
+\end{texitable}
+\bigskip
+
+\noindent Examples:
+\medskip
+
+\noindent Construct a periodic sequence with noise and plot its spectrum:
+\begin{texiexample}
+    Fs= 60;
+    t = 0:1/Fs:5;
+    x = cos(2*pi*20*t) + 0.2*randn(size(t));
+    [S1,f,Sc1] = mtpsd( x,2.5,[],2*length(t),Fs);
+    figure(1);
+    plot( f, 10*log10([S1, Sc1]) );
+\end{texiexample}
+Here, adaptive weighting is used with the default \var{nseq} = 4 tapers.
+\medskip
+
+\noindent Perform an F-test for significant frequencies:
+\begin{texiexample}
+    [S2,f,Sc2,F] = mtpsd( x,2.5,[],2*length(t),Fs,[],1-1/length(x));
+    fsig = f( F(:,1)>F(:,2) ); 
+    printf('Significant frequencies:\t');
+    disp(fsig');
+\end{texiexample}
+The frequencies in \code{fsig} surpass the the F-test threshold probability of 99.67\%.
+\medskip
+
+\noindent Spectrum of a complex series:
+\begin{texiexample}
+    z = exp(I*2*pi*20*t) + 1/sqrt(2)*(1+I);
+    z = z+0.2*( randn(size(t)) + I*randn(size(t)) );
+    S3a = mtpsd( z,2.5,[],2*length(t),Fs, 'eigen', 'mean');
+    S3b = mtpsd( z,2.5,[],2*length(t),Fs, 'eigen');
+    figure(2);
+    plot( f, 10*log10([S3a S3b]) ); 
+\end{texiexample}
+In S3a, the mean is left in the data for spectrum calculations.  It is removed in the computation of S3b.
+\bigskip
+
+\noindent REFERENCES
+\medskip
+
+\noindent [1] Percival, D.B., and A.T. Walden, Spectral Analysis for Physical Applications: Multitaper and Conventional Univariate Techniques, Cambridge University Press, 1993.
+\smallskip
+
+\noindent [2] Sanchez, C.A., \code{mtpsd} Documentation, $<$http://sourceforge.net/projects/mtpsd$>$, 2010.
+\index{mtpsd@\texttt{mtpsd}!Octave extension|)}
+
+\subsection{\texttt{dpss.oct}}
+
+\index{dpss@\texttt{dpss}!Octave extension|(}
+\deftypefn  {Loadable Function} {\var{h} =}{dpss (\var{n},\var{nW})}
+\deftypefnx {Loadable Function} {\var{h} =} {dpss (\var{n}, \var{nW}, \var{nseq})}
+\deftypefnx {Loadable Function} {\var{h} =} {dpss (\var{n}, \var{nW}, \var{nseq}, \var{'interp'})}
+\deftypefnx {Loadable Function} {\var{h} =} {dpss (\var{n}, \var{nW}, \var{nseq}, \var{'interp'}, \var{nb})}
+\deftypefnx {Loadable Function} {\var{h} =} {dpss (\var{n}, \var{nW}, \var{'interp'})}
+\deftypefnx {Loadable Function} {\var{h} =} {dpss (\var{n}, \var{nW}, \var{'interp'}, \var{nb})}
+\deftypefnx {Loadable Function} {\var{h} =} {dpss (\dots{}, \var{'trace'})}
+\deftypefnx {Loadable Function} {[ \var{h}, \var{l} ] =} {dpss (\dots{})}
+\vspace*{-0.5em}
+
+\noindent Computes a set of discrete prolate spheroidal sequences (aka Slepian sequences) using the symmetric tridiagonal matrix formulation, with even-odd splitting.  These sequences are typically used in multitaper spectral analysis.
+
+The columns of \var{h} are the resulting sequences of length \var{n} and time-bandwidth product \var{nW}.  Typical values of \var{nW} are 2, 2.5, 3, 3.5 and 4.  The output \var{l} is a column vector containing the concentration of energy of each sequence in the normalized frequency range $f \in [-W,W]$.  By definition, the first discrete prolate spheroidal sequence maximizes this energy concentration.  The i-th sequence is the one that maximizes the concentration, subject to lying in the subspace perpendicular to that spanned by the previous i-1 sequences.  The initial $\lfloor 2nW \rfloor$ DPSSs have concentrations near one.  After this point, the concentrations rapidly drop to zero.
+
+If \var{nseq} is not provided, then first $\lfloor 2nW \rfloor$ sequences are returned.  If \var{nseq} is an integer, $1\;\le$ \var{nseq} $ \le$ \var{n}, then the first \var{nseq} sequences are returned.  If \var{nseq} = [\var{seql}, \var{sequ}] is a range, then the \var{seql}-th through \var{sequ}-th sequences are returned.  Note: the first sequence has an index equal to one.
+
+The maximum sequence length that can be calculated from the definition in this routine is \var{NMAX} = $2^{17}-1$.  For larger values of \var{n}, the DPSSs are approximated using interpolation.  Valid strings for \var{'interp'} are:
+\begin{texitable}
+    \item [\var{'spline'}] Interpolate using natural cubic splines (default).
+    \item [\var{'linear'}] Interpolate linearly.
+\end{texitable}
+By default, sequences of length \var{n} $>$ \var{NMAX} are interpolated from the set of sequences generated by
+\begin{texiexample}
+    dpss ( NMAX, nW, ... ).
+\end{texiexample}
+\noindent If a base size, \var{nb}, is supplied, then the sequences are interpolated from
+\begin{texiexample}
+    dpss ( min (nb, NMAX), nW, ... ).
+\end{texiexample}
+\noindent The interpolation routine assumes that the sequences are evaluations of a function at the midpoints of an equally-spaced grid.  For the natural cubic splines, a zero-derivative boundary condition is assumed at the two end-points.
+
+A final input string \var{'trace'} will print the interpolation method (if any) and the computation parameters to the command window.
+\bigskip
+
+\noindent Examples:
+\medskip
+
+\noindent Compute basic DPSSs:
+\begin{texiexample}
+    h = dpss(12, 3, 2); 
+\end{texiexample}
+The first two sequences with length 12 and time-bandwidth product \var{nW}=3 are returned.
+\medskip
+
+\noindent Compute a range of DPSSs:
+\begin{texiexample}
+    h = dpss(12, 3, [3 5]); 
+\end{texiexample}
+The third through fifth DPSSs of length 12 and \var{nW}=3 are returned.
+\medskip
+
+\noindent Use interpolation to compute long sequences:
+\begin{texiexample}
+    [h, l] = dpss(8388608, 2.5, 'spline', 32768); 
+\end{texiexample}
+\noindent The first 2\var{nW}=5 sequences of length $2^{23}$ and time-bandwidth product \var{nW}=2.5 are returned, along with their energy concentrations.  Note that these were obtained by first computing sequences of length $2^{15}$, then interpolating using natural cubic splines and re-normalizing to have unit energy.  The interpolated sequences are used to estimate the energy concentrations.
+
+\index{dpss@\texttt{dpss}!Octave extension|)}
+
+\index{Octave dynamical extensions|)}

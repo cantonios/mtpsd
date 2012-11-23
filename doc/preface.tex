@@ -1,0 +1,100 @@
+The intent of this documentation is two-fold:
+\begin{itemize}
+    \item to describe the use of the classes and methods contained in the 
+        \texttt{mtpsd} library, and
+    \item to explain the underlying mechanisms and the reasoning behind them.
+\end{itemize}
+In my (short and limited) experience, I've learned to be wary of academic tools
+that don't explain precisely the way they work behind-the-scenes.  When 
+something isn't behaving as expected, one is often stuck examining the source 
+code, trying to decipher the algorithms the author used (or \emph{tried to} 
+use).  It is my hope that this document is clear about how each method does 
+what it does.  Unfortunately, this meant I had to include a Theory section, 
+where I could put the equations involved.  For this section, it is assumed 
+that the reader is somewhat familiar with frequency analysis, and has at least 
+heard of David Thomson's multitaper technique.  If not, excellent sources of 
+information are Thomson's seminal paper on the multitaper method 
+\cite{thomson:multitaper}, and Percival and Walden's fundamental text on 
+spectral analysis \cite{percival:multitaper}.
+
+The original motivation for this project was, unfortunately, the result of an 
+academic tool not behaving as expected.  While taking a course on statistical 
+signal processing (taught by Thomson), I found that the confidence intervals 
+produced by \textsc{Matlab} for an adaptively weighted spectrum estimate seemed
+to match too closely to those for uniform weighting.  At the time, I just found
+it curious, but decided not to investigate.  It wasn't until recently, when I 
+needed the functionality in the open-source GNU Octave, that I had cause to 
+look into it.
+
+The Octave signal processing toolbox does not include the multitaper technique,
+and I was not able to find a suitable (open-source) replacement.  So, I began 
+coding my own, comparing results with \textsc{Matlab} to make sure the two were
+consistent.  For eigenvalue weighting, the two results were close, but would 
+not match exactly.  For adaptive weighting, my confidence intervals were quite 
+a bit larger, which reminded me of Thomson's course.  This led me to examine 
+the source code for \textsc{Matlab}'s \texttt{pmtm} function, to see exactly 
+what was being returned.  I found the following `bugs':
+\begin{itemize}
+    \item For eigenvalue weighting with $K$ tapers, the weights are 
+        approximated as $w_k$ = $\lambda_k/K$, when they should be 
+        $w_k$ = $\lambda_k/\sum_i\lambda_i$.
+    \item Confidence intervals are computed as if equal weighting was used, 
+        setting $\nu=2K$, where $\nu$ is the degrees of freedom in the estimate.
+\end{itemize}
+The first `bug' isn't much of a problem as long as the number of tapers is less
+than twice the time-bandwidth product.  However, being a student of
+mathematics, it bothers me that the sum of weights used in a weighted average 
+is not equal to one.  The second bug, however, \emph{is} a problem.  The 
+purpose of adaptive weighting is to adjust weights in order to reduce 
+broad-band bias.  This makes the weights frequency-dependent, and reduces the
+degrees of freedom in some areas of the estimate.  In heavily biased regions, 
+$\nu$ can be near 2, which can differ significantly from $2K$.  There is a 
+trade-off: the bias is reduced, but the confidence interval is widened.  If one
+simply trusted the results of \texttt{pmtm}, there would be no apparent cost to
+reducing bias.  In fact, since the adaptively weighted estimate is lower than 
+the equally weighted one in biased regions, the interval reported by 
+\texttt{pmtm} is actually narrowed.  This \emph{contradicts common-sense}: you 
+should not have more confidence in a result that uses less information.  These
+errors were the inspiration for the development of a publicly-available 
+library.  I chose to use C++ so I could use the methods in another project.  
+And so began \texttt{mtpsd}: the Multi-Taper Power Spectral Density estimator.
+
+I should mention another publicly-available package, written in Fortran 90 by 
+Germ\'an A.~Prieto: \href{http://wwwprof.uniandes.edu.co/~gprieto/software/%
+mwlib.html}{\texttt{mwlib}}.  I found the library to work well, for the most
+part.  Again, for eigenvalue weighting, the weights are approximated as 
+$w_k$ = $\lambda_k/K$, which is only appropriate when $K$ is less than twice 
+the time-bandwidth product.  Also, the degrees of freedom are computed in a 
+non-smooth fashion:
+\begin{align*}
+    \alpha_k & = \dfrac{w_k\sqrt{K}}{\sqrt{\sum_{i=0}^{K-1} w_i^2}} %
+        & \nu & = 2\sum_{k=0}^{K-1} \min\{\alpha_k,1\}.
+\end{align*}
+This is inconsistent with the assumption that the spectrum estimate follows a
+scaled $\chi^2_\nu$ distribution, as put forth in \cite{percival:multitaper,%
+thomson:multitaper,thomson:lecture}. Specifically, the variances do not agree.
+Also, in the \texttt{mwlib} package, the confidence interval is computed using
+a jack-knife, leaving out one eigenspectrum at a time.  This may not be 
+suitable for a small number of tapers.  The tool does, however, have a useful 
+methods for removing line frequencies and reshaping the spectrum estimate, 
+which more than make up for the flaws mentioned.
+
+The \code{mtpsd} library is available for public use, released under GPLv3.  
+Feel free to modify the code for your own purposes.  It has been tested on 
+64-bit Windows 7 with MSYS/MinGW64, and on 64-bit Ubuntu 12.10.  The Octave
+extensions have only been tested on 32-bit versions of Octave.  If you have 
+roblems compiling, or have found a bug, please let me know so I can fix the 
+issue.
+\smallskip
+
+\hfill $\sim$ Antonio\hspace*{4ex}
+\bigskip
+
+\vfill
+\noindent \parbox{\textwidth}{
+C.~Antonio S\'anchez\\
+Master of Mathematics (2010), University of Waterloo\\
+Bachelor of Science (2007), Queen's University\\
+\href{mailto:antonio@eigenspectrum.com}{antonio@eigenspectrum.com}
+}
+\smallskip

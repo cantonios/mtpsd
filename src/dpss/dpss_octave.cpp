@@ -207,7 +207,7 @@ void print_workspace(dpss_workspace work, char *prepend, char *append, char topc
         sprintf(line[li++],"    Energy: Concentrations calculated using FFTs (FFTW)");
     
     for (int ii=0; ii<li; ii++)
-        lmax=max<int>(lmax,strlen(line[ii]));
+        lmax=tmath::max<int>(lmax,strlen(line[ii]));
     
     int nprep, napp;
     nprep=strlen(prepend); 
@@ -284,12 +284,12 @@ dpss_workspace parse_args(octave_value_list inargs, int nargin, int nargout){
             case SEQL:
                 if (inargs(ii).is_scalar_type()){
                     args.seql=0;
-                    args.sequ=max<int>((inargs(ii).int_value()),1)-1;   //sequences begin at zero in code                                               
+                    args.sequ=tmath::max<int>((inargs(ii).int_value()),1)-1;   //sequences begin at zero in code
                     ii++;
                 }
                 else if (inargs(ii).is_matrix_type()){
-                    args.seql=max<int>(floor(inargs(ii).matrix_value()(0)),1)-1;
-                    args.sequ=max<int>(floor(inargs(ii).matrix_value()(1)),1)-1;
+                    args.seql=tmath::max<int>(floor(inargs(ii).matrix_value()(0)),1)-1;
+                    args.sequ=tmath::max<int>(floor(inargs(ii).matrix_value()(1)),1)-1;
                     ii++;
                 }
                 else if (inargs(ii).is_string()){}

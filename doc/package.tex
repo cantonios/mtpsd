@@ -1,0 +1,84 @@
+The \code{mtpsd} library is a combination of two projects: one for computing the discrete prolate spheroidal sequences, and one for computing multitaper spectrum estimates.  It is possible to compile two static libraries:
+\smallskip
+
+\begin{tabular}{lp{\textwidth-25ex}}
+    \texttt{libdpss.a}\index{libdpss@\texttt{libdpss}} & Provides methods for computing DPSSs.\\
+    & Dependencies: \texttt{libfftw3}.\\
+    \texttt{libmtpsd.a}\index{libmtpsd@\texttt{libmtpsd}} & Provides methods for computing all multitaper estimates and properties described in Section \ref{sec:theory}, as well as for computing the DPSSs (i.e.~it \emph{includes} \texttt{libdpss.a}).\\
+    & Dependencies: \texttt{liblapack}, \texttt{libfftw3}.
+\end{tabular}
+\smallskip
+
+\noindent The two Octave extensions, \texttt{dpss.oct} and \texttt{mtpsd.oct}, provide an interface to the library.  They depend on the Octave \texttt{mkoctfile} utility.  The command-line application, \texttt{dpss}, uses the \texttt{dpss} library to compute DPSSs, and prints the results to \code{stdout}.
+
+\subsection{Compiling}
+
+Compiling the libraries is most easily accomplished with the GNU make utility.  The provided Makefile should work as-is for most Unix-based systems.
+\smallskip
+
+\noindent \begin{tabular}{@{\hspace*{4ex}}p{17ex}@{\hspace*{3ex}}p{\textwidth-28ex}@{\hspace*{4ex}}}
+    \texttt{make [all]} & builds the two static libraries: \\
+                        & \hspace*{4ex}\texttt{lib/libdpss.a}, \texttt{lib/libdpss.a}; \\
+                        & the two octave extensions: \\
+                        & \hspace*{4ex}\texttt{bin/dpss.oct}, \texttt{bin/mtpsd.oct}; \\
+                        & and the command-line application:\\
+                        & \hspace*{4ex}\texttt{bin/dpss}.\\
+    \texttt{make lib} & builds \texttt{lib/libdpss.a} and \texttt{lib/libdpss.a}.\\
+    \texttt{make oct} & builds \texttt{bin/dpss.oct} and \texttt{bin/mtpsd.oct}.\\
+    \texttt{make nooct} & builds \texttt{lib/libdpss.a}, \texttt{lib/libdpss.a}, and \texttt{bin/dpss}.
+\end{tabular}
+\smallskip
+
+\noindent There is no `install' directive.  All binaries and Octave extensions are placed in the local \texttt{bin/} directory, C++ libraries in \texttt{lib/}, and header files in \texttt{include/}.  See the Makefile for more building options.
+
+For windows, you will need to edit the Makefile to point to the correct compiler.  If you are building the Octave extensions, that compiler must be compatible with your version of Octave.  For example, I have MinGW64 installed, but Octave provided by the \href{http://sourceforge.net/projects/octave/files/Octave_Windows\%20-\%20MinGW/Octave\%203.2.4\%20for\%20Windows\%20MinGW32\%20Installer/}{Octave Windows installer} was compiled with MinGW32.  I had to set:
+\begin{itemize}
+    \item[-] \texttt{CC=mingw32-g++-4.4.0-dw2.exe},\\
+        the compiler provided by the Octave installation.
+    \item[-] \texttt{MINGW\_PATH=/d/local/octave/mingw32},\\
+        Octave's MinGW path, so the compiler can find the right libraries and executables.
+    \item[-] \texttt{LIB\_PATH=/d/local/octave/lib},\\
+        the path with Octave's versions of the LAPACK and FFTW3 libraries.
+\end{itemize}
+These parameters are near the top of the Makefile.
+
+\subsection{Linking}
+
+If you are using the GNU gcc compiler, use the \texttt{-static} option and link using \texttt{-lmtpsd}\index{libmtpsd@\texttt{libmtpsd}} (or \texttt{-ldpss}\index{libdpss@\texttt{libdpss}} for just that component).  You must also link to \texttt{liblapack} and \texttt{libfftw3}.  For example,
+\begin{verbatim}
+    gcc -static main.cpp -lmtpsd -llapack -lfftw3 -o my_prog
+\end{verbatim}
+will create the binary \texttt{my\_prog} from \texttt{main.cpp}.  Make sure the libraries can be found by the linker.  If you have not installed \texttt{libmtpsd} to a default search directory, you will need to pass the option \texttt{-L}\textit{/path/to/library}.  If your compiler complains about \code{dlamch_}, you must also link to the BLAS library (\texttt{-lblas}).  If you use the Fortran version of LAPACK, you may also need \texttt{-lgfortran}.
+
+\subsection{Headers}
+
+In order to use the C++ libraries, include the appropriate header file in your source code.  All headers are found in the \texttt{include/} directory.  The following is a short description of each of the available headers:
+
+\begin{codelist}
+    \item[mtpsd.h] contains the \code{mtpsd}\index{mtpsd class@\texttt  {mtpsd} class}\index{libmtpsd@\texttt{libmtpsd}} class and all methods required for computing the multitaper power spectral density of a time-series.
+    \item[dpss.h] contains the \code{dpss}\index{dpss class@\texttt  {dpss} class}\index{libdpss@\texttt{libdpss}} class and all methods required for computing the discrete prolate spheroidal sequences.  This file is automatically included by \texttt{mtpsd.h}.
+    \longitem{applied\_stats.h} contains procedures needed to compute quantiles of $\chi^2$ and Gaussian distributions.  This file is automatically included by \texttt{mtpsd.h}.
+    \longitem{simple\_error.h} contains two error classes: one specific for LAPACK errors, and one general.  This file is automatically included by \texttt{dpss.h} and \texttt{mtpsd.h}.\index{ERR class@\texttt{ERR} class}\index{LAPACK_ERROR class@\texttt{LAPACK\_ERROR} class}
+    \longitem{template\_math.h} contains some basic math/vector math operations, written using templates.  This file is automatically included by \texttt{dpss.h} and \texttt{mtpsd.h}.
+\end{codelist}
+
+\subsection{License}
+\vspace*{0.5em}
+
+\copyright~C.~Antonio S\'anchez 2010
+\vspace*{0.5em}
+
+\noindent \texttt{mtpsd} is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+\vspace*{0.5em}
+
+\noindent \texttt{mtpsd} is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+\vspace*{0.5em}
+
+\noindent You should have received a copy of the GNU General Public License
+along with \texttt{mtpsd}.  If not, see $<$\url{http://www.gnu.org/licenses/}$>$.

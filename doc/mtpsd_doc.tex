@@ -1,0 +1,330 @@
+\documentclass[10pt]{article}
+%\usepackage[utf8x]{inputenc}
+
+%\usepackage{html}   %  *always* load this for LaTeX2HTML
+\usepackage{makeidx}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage[colorlinks=true, citecolor=green!60!black, linkcolor=red!60!black, urlcolor=purple!60!black, filecolor=magenta!30!black]{hyperref}
+\usepackage[pdftex]{graphicx}
+\usepackage{setspace}
+\usepackage{calc}
+\usepackage{colortbl}
+\usepackage{verbatim}
+\usepackage{ifthen}
+\usepackage[labelfont=bf]{caption} 
+\usepackage{fancyhdr}
+\usepackage{extramarks}
+
+\usepackage[sort,compress,numbers]{natbib}
+%\setlength{\natbibspacing}{0.2em}
+
+%\usepackage{customsections}     %reformats chapter/section titles 
+%\usepackage{fullpage}
+
+\setlength{\captionmargin}{4ex}
+\setlength{\headheight}{12pt}       % I need a larger header for the accent in my name
+\setlength{\headsep}{15pt}
+\setlength{\topmargin}{25pt}
+\setlength{\footskip}{40pt}         % adds a bit more space between bottom of text/page number
+\setlength{\hoffset}{0.125in}
+%creates a length that shifts page away from the inside edge in double-sided printing
+\newlength{\insideshift}
+\setlength{\insideshift}{0.8in}
+% adjusts textwidth/height based on above sizes
+\setlength{\textwidth}{\paperwidth-2in-2\hoffset-\insideshift}
+\setlength{\textheight}{\paperheight-2in-2\voffset-\topmargin-\headheight-\headsep-\footskip}   % makes bottom of footer at 1in+\voffset
+\setlength{\headwidth}{\textwidth}      % adjusts header to match textwidth
+\setlength{\evensidemargin}{0.5\insideshift}
+\setlength{\oddsidemargin}{0.5\insideshift}
+
+
+\usepackage{listings}
+\lstset{  language=C++,  basicstyle=\ttfamily\small,  keywordstyle=\color{blue!70!black},  identifierstyle=,  commentstyle=\color{green!50!black}\itshape\ttfamily,
+          stringstyle=\color{red!60!black}\ttfamily,  showstringspaces=false,  backgroundcolor=\color{gray!5},  fillcolor=\color{gray!5}, rulesepcolor=\color{gray!5},
+          rulecolor=\color{black}, framexleftmargin=4ex, framexrightmargin=4ex, framexbottommargin=0.5em, framextopmargin=0.25em, xleftmargin=4ex, xrightmargin=4ex,
+          columns=fixed, basewidth={1.2ex,1.5ex}, fontadjust=true, numbers=left, numberstyle=\tiny\color{gray!80}, stepnumber=1, numbersep=4ex, 
+          escapeinside={/*@}{@*/}, frameshape={n}{}{}{nyn}
+}
+
+\newcommand{\lstquick}[1]{\lstinline[language=C++,basicstyle=\ttfamily\color{black!90},keywordstyle=\color{blue!60!black!90},columns=fixed,fontadjust=true,identifierstyle=, commentstyle=\color{green!50!black}\itshape\ttfamily,stringstyle=\color{red!60!black}\ttfamily,basewidth={1.2ex,1.5ex}]{#1}}
+
+\usepackage{lstskipnumbers}
+\lstnewenvironment{lstshortblock}
+    {\lstset{ language=C++, numbers=none,backgroundcolor=\color{gray!5}, xleftmargin=8ex, xrightmargin=6ex, framexleftmargin=4ex, framexrightmargin=2ex,
+              frameshape={nyn}{}{}{nnn},
+              basicstyle=\ttfamily\small, keywordstyle=\color{blue!70!black}, identifierstyle=, commentstyle=\color{green!50!black}\itshape\ttfamily,
+              stringstyle=\color{red!60!black}\ttfamily, columns=fixed, basewidth={1.2ex,1.5ex}, fontadjust=true  } }
+    {}
+
+\lstnewenvironment{lstplainblock}
+    {\lstset{ language=C++, numbers=none, backgroundcolor=\color{white}, xleftmargin=4ex, xrightmargin=0ex, framexleftmargin=0ex, framexrightmargin=0ex,
+              frame=none,
+              basicstyle=\ttfamily\small, keywordstyle=\color{blue!70!black}, identifierstyle=, commentstyle=\color{green!50!black}\itshape\ttfamily,
+              stringstyle=\color{red!60!black}\ttfamily, columns=fixed, basewidth={1.2ex,1.5ex}, fontadjust=true  } }
+    {}
+
+%\captionsetup[lstlisting]{singlelinecheck=false, labelfont={blue}, textfont={blue}}
+\DeclareCaptionFont{white}{\color{white}}
+\DeclareCaptionFormat{listing}{\colorbox{gray!80}{\parbox{\textwidth-6pt}{\hspace{\parindent}#1#2#3}}}
+\captionsetup[lstlisting]{format=listing,labelfont=white,textfont=white, singlelinecheck=false, margin=0pt, font={bf,small}}
+
+\newlength{\tmplength}
+\newlength{\codemargin}         \newlength{\codeindent}
+\setlength{\codemargin}{0pt}    \setlength{\codeindent}{0in}
+\newcommand{\codelabel}[1]{\settowidth{\tmplength}{\texttt{#1}x}\parbox[t]{\tmplength}{\texttt{#1}:}\hfill}
+\newcommand{\longitem}[1]{\item[#1] \parbox{\textwidth-\tmplength-\labelsep}{\hfill}\\}
+\newenvironment{codelist}
+   {\begin{list}{} %
+      {\renewcommand{\makelabel}{\codelabel}
+       \setlength{\labelwidth}{11ex}
+       \setlength{\labelsep}{1ex}
+       \setlength{\itemsep}{0.2em}
+       \setlength{\leftmargin}{16ex}
+       \setlength{\rightmargin}{4ex}
+      }
+   }
+   {\end{list}}
+
+\newenvironment{fdescription}{
+        \small
+        \settowidth{\tmplength}{Workspace:}
+        \begin{tabular}{@{\hspace*{8ex}}p{\tmplength}@{\hspace*{2ex}}p{\textwidth-\tmplength-18ex}@{\hspace*{8ex}}}
+    }
+    {   \end{tabular}   }
+\newcommand{\fdbottom}{\vspace*{-0.5em}
+
+                       \noindent\hspace*{4ex}\rule{\textwidth-8ex}{0.5pt}\hfill
+                       \vspace*{1em}}
+
+\settowidth{\tmplength}{\texttt{template <class A, class B>}}
+\newlength{\dodgethis} 
+\newcommand{\templatecode}[4]{ {\small
+    \settowidth{\tmplength}{\texttt{#2}}
+    \settowidth{\dodgethis}{\texttt{doublexxx}}
+    \setlength{\tmplength}{\dodgethis-\tmplength}
+    \noindent \hspace*{2ex}\parbox[t]{\textwidth-2ex}{\code{#1}}\\
+    \noindent \hspace*{2ex}\parbox[t]{\dodgethis}{\hspace*{\tmplength}\code{#2}}\hspace*{1.5ex}\parbox[t]{\textwidth-\dodgethis-7ex}{\code{#3}\\[0.2em] #4}
+    \bigskip
+
+ }}
+\newcommand{\templatecodecont}[4]{ {\small
+    \settowidth{\tmplength}{\texttt{#2}}
+    \settowidth{\dodgethis}{\texttt{doublexxx}}
+    \setlength{\tmplength}{\dodgethis-\tmplength}
+    \noindent \hspace*{2ex}\parbox[t]{\dodgethis}{\hspace*{\tmplength}\code{#2}}\hspace*{1.5ex}\parbox[t]{\textwidth-\dodgethis-7ex}{\code{#3}\\[0.2em] #4}
+    \bigskip
+
+ }}
+
+%\newcommand{\codelabel}[1]{\parbox[t]{\textwidth-2\codemargin}{\setlength{\parindent}{-5ex}\setlength{\leftskip}{5ex}\texttt{#1}}}
+\newlength{\leftshift}
+\newlength{\bodyindent}
+\newlength{\ccwordlength}
+\setlength{\bodyindent}{0.5in}
+\newcommand{\codeitem}[2]{\item[#1] \lstquick{#2}\hfill\\}
+\newcommand{\compactcodelabel}[1]{  \settowidth{\ccwordlength}{\texttt{#1}x}
+                                    \setlength{\leftshift}{\ccwordlength}
+                                    \addtolength{\leftshift}{\leftmargin}
+                                    \addtolength{\leftshift}{-\bodyindent}
+                                    \addtolength{\leftshift}{1.5ex}
+                                    \hspace*{-\leftshift}\parbox[t]{\ccwordlength}{\lstquick{#1}}        }
+\newenvironment{compactcodelist}
+   {\begin{list}{} %
+      {\setlength{\labelwidth}{0.2in}
+       \setlength{\labelsep}{0in}
+       \setlength{\itemsep}{0in}
+       \setlength{\leftmargin}{\bodyindent}
+       \setlength{\rightmargin}{0pt}
+       \renewcommand{\makelabel}{\compactcodelabel}
+      }
+   }
+   {\end{list}}
+
+
+\newcommand{\var}[1]{{\slshape #1}}
+\newlength{\loadfunclen}
+\newcommand{\deftypefn}[3]{ \settowidth{\loadfunclen}{[#1]}
+                            \noindent\parbox{\textwidth-\loadfunclen}{\texttt{#2 #3}}\parbox{\loadfunclen}{[#1]}}
+\newcommand{\deftypefnx}[3]{\deftypefn{#1}{#2}{#3}}
+
+\newlength{\texitablemargin}
+\newlength{\texiitemindent}
+\setlength{\texitablemargin}{0.8in}
+\setlength{\texiitemindent}{2ex}
+\newcommand{\texilabel}[1]{\parbox{\texitablemargin}{\hspace*{\texiitemindent}\texttt{#1}}}
+\newenvironment{texitable}
+   {\begin{list}{} %
+      {\renewcommand{\makelabel}{\texilabel}
+       \setlength{\labelwidth}{\texitablemargin}
+       \setlength{\labelsep}{0pt}
+       \setlength{\itemsep}{0.2em}
+       \setlength{\leftmargin}{\texitablemargin}
+       \setlength{\rightmargin}{4ex}
+      }
+   }
+   {\end{list}}
+
+\newenvironment{texiexample}{\vspace*{-0.5em}\verbatim 
+                                        }
+                            {\endverbatim \vspace*{-0.5em}}
+
+
+\usepackage{amsmath}
+\usepackage{amsthm}
+
+\newtheoremstyle{cool}% name of the style to be used
+  {3pt}% measure of space to leave above the theorem. E.g.: 3pt
+  {3pt}% measure of space to leave below the theorem. E.g.: 3pt
+  {\itshape}% name of font to use in the body of the theorem
+  {0pt}% measure of space to indent
+  {\bfseries}% name of head font
+  {:}% punctuation between head and body
+  {0.5em}% space after theorem head; " " = normal interword space
+  {}% Manually specify head
+
+\theoremstyle{cool}
+\newtheorem*{problem}{Problem}
+
+%opening
+\title{\texttt{mtpsd} Documentation}
+\author{C.~Antonio S\'anchez}
+
+\newcommand{\code}[1]{\lstquick{#1}}
+
+\renewcommand\listtablename{Tables}
+\renewcommand\listfigurename{Figures}
+
+\makeindex
+
+\newcommand{\sectiontitle}{}
+\newcommand{\newsection}[1]{\renewcommand{\sectiontitle}{#1}\markboth{\scshape \sectiontitle}{}\section{\sectiontitle}\markboth{\scshape \sectiontitle}{} }
+
+\fancypagestyle{plain}{
+    \fancyhf{}
+    \lhead{}
+    \lfoot{}
+    \cfoot{\thepage}
+    \renewcommand{\headrulewidth}{0pt}
+    \renewcommand{\footrulewidth}{0pt}    
+}
+\fancypagestyle{contents}{
+    \renewcommand{\headrulewidth}{0.5pt}
+    \lhead{\firstleftmark}
+    \rhead{}
+    \lfoot{}
+    \cfoot{\thepage}
+}
+\fancypagestyle{body}{
+    \renewcommand{\headrulewidth}{0.5pt}
+    \lhead{\firstleftmark}
+    \rhead{\rightmark}
+    %\rhead{\ifthenelse{\equal{\rightmark}{}}{}{\thesection\hspace{1ex}\rightmark}}
+    \lfoot{}
+    \cfoot{\thepage}
+}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent The \code{mtpsd} library contains a collection of functions for estimating the power spectral density (PSD) of a one-dimensional time-series, along with its statistical properties, using Thomson's multitaper (MT) method.  This includes adaptive weighting, confidence intervals, an F-test for significant frequencies, and methods for computing the special tapers: discrete prolate spheroidal sequences.  This library is written in C++, and depends on LAPACK and FFTW3.  Also included in the package are Octave dynamical extensions (oct-files) to interface with the library, and a command-line executable to compute tapers.
+\end{abstract}
+\bigskip
+
+\begin{center}
+    \copyright~C.~Antonio S\'anchez 2012
+\end{center}
+
+\newpage
+
+\pagenumbering{roman}
+
+\pagestyle{contents}
+
+\tableofcontents
+\listoftables
+\lstlistoflistings
+\listoffigures
+
+\newpage
+
+\section*{Preface}
+\renewcommand{\sectiontitle}{Preface}
+\markboth{\scshape \sectiontitle}{}
+\addcontentsline{toc}{section}{Preface}
+\input{preface.tex}
+
+\clearpage
+
+\pagestyle{body}
+
+\pagenumbering{arabic}      %arabic numbering
+
+\newsection{Introduction}
+\input{intro.tex}
+\newpage
+
+\newsection{Overview of Theory\label{sec:theory}}
+\input{theory.tex}
+\clearpage
+
+\newsection{The Package \label{sec:package}}
+\input{package.tex}
+\newpage
+
+\markboth{\textsc{Using the }\texttt{mtpsd}\textsc{ Library}}{}
+\newsection{Using the \texttt{mtpsd} Library \label{sec:mtpsd}}
+\markboth{\textsc{Using the }\texttt{mtpsd}\textsc{ Library}}{}
+\input{mtpsd.tex}
+
+\newpage
+
+\markboth{\textsc{Using the }\texttt{dpss}\textsc{ Library}}{}
+\newsection{Using the \texttt{dpss} Library \label{sec:dpss}}
+\markboth{\textsc{Using the }\texttt{dpss}\textsc{ Library}}{}
+\input{dpss.tex}
+\clearpage
+
+\newsection{Other Useful Routines \label{sec:otherroutines}}
+\input{othercode.tex}
+
+\clearpage
+
+\newsection{Octave Implementations \label{sec:octaveimp}}
+\input{octave.tex}
+
+\newpage
+
+\newsection{Command-Line Implementation \label{sec:cmdimp}}
+\input{commandline.tex}
+
+\newpage
+
+\newsection{Contact}
+
+Found a bug?  Something not working as expected?  As it should?  Questions?  Comments?  Feel free to contact the author:
+\medskip
+
+\indent Antonio S\'anchez\\
+\indent \href{mailto:antonio@eigenspectrum.com}{antonio@eigenspectrum.com}
+
+\newpage
+
+\renewcommand{\sectiontitle}{References}
+\markboth{\scshape \sectiontitle}{}
+\pagestyle{contents}
+\nocite{*}  %adds all titles in bib files to bibliography
+%\bibliographystyle{plain}
+\bibliographystyle{abbrvnat}
+\bibliography{mtpsd}
+\addcontentsline{toc}{section}{References}
+
+{\small
+\renewcommand{\sectiontitle}{Index}
+\markboth{\scshape \sectiontitle}{}
+\printindex
+}
+
+\end{document}

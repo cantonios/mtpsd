@@ -1,0 +1,486 @@
+\index{mtpsd@\texttt{mtpsd}|(}There are two main ways to use the \texttt{mtpsd} library.  The first is through the use of an object.  The \code{mtpsd.h} header defines the \code{mtpsd} class, which can be used to compute any of the multitaper spectrum estimates and properties described in Section \ref{sec:theory}.  All of the internal variables are protected, so must be accessed through provided accessors.  One special accessor is defined, \code{mtpsd::pS()}, which returns a \code{const double} pointer to the protected spectrum array, allowing more direct access.  The class and its use are described in Section \ref{sec:basic}.
+
+The second way to use the library allows for more control over memory and access to intermediate variables.  A set of functions are defined that accept and fill user-defined arrays.  For multi-dimensional arrays, row-major format is assumed.  This advanced use is covered in Section \ref{sec:advanced}.
+
+\subsection{Basic Use: the \texttt{mtpsd} Class \label{sec:basic}}
+
+Listing \ref{lst:basic} shows the most basic construction and use of an \code{mtpsd} object.  \index{mtpsd class@\texttt  {mtpsd} class|(}
+\begin{lstlisting}[label=lst:basic,caption=Basic example of the \texttt{mtpsd} class]
+#include "mtpsd.h"              /*@\lstomitnum@*/
+...                             /*@\lstskipnum{8}@*/
+{
+    double *x;          // time series
+    uint_t n;           // length(x), (unsigned int)
+    double nW;          // time-bandwidth product   /*@\lstomitnum@*/
+    ...                         /*@\lstomitnum\lstskipnum{7}@*/
+    
+    mtpsd<double> spectrum(x, n, nW);
+    try{
+        spectrum.compute();
+    }
+    catch(ERR e){
+        printf("ERROR: %s\n", e.getmsg());   
+    }                           /*@\lstomitnum@*/
+    ...                         /*@\lstomitnum\lstskipnum{7}@*/
+    
+    printf("S=%f, f=%fHz \n", spectrum(i), spectrum.freq(i));    /*@\lstomitnum@*/
+    ...                         /*@\lstskipnum{8}@*/
+}
+\end{lstlisting}\index{mtpsd class@\texttt  {mtpsd} class!compute@\texttt{compute()}}
+\smallskip
+
+\noindent In the example, the \code{spectrum} object contains all information pertaining to the multitaper estimate.  There are several things to note:
+\begin{itemize}
+    \item \code{mtpsd} is an \emph{template class}.  The library is configured to compile for types \code{double} and \code{fftw\_complex} (\code{double \_\_complex\_\_}).  This must correspond to the data type of the time-series \code{x}.
+    \item The \code{compute()} method may throw an error of type \code{ERR}\index{ERR class@\texttt{ERR} class}.  This class is defined in \code{simple\_error.h} (see Section \ref{sec:simpleerr}).  The error class only has one property: an error message, accessible through \code{ERR::getmsg()}.
+    \item All lengths and indices are of type \code{unsigned int}.  A short-form for this type, \code{uint\_t}\index{uint\_t@\texttt{uint\_t}}, is defined in the \code{mtpsd.h} header.
+    \item This basic constructor assumes adaptive weighting, a sampling frequency of 1 Hz, and uses $K=\max\{\lfloor2nW\rfloor-1,2\}$ data tapers.
+\end{itemize}
+The desired spectrum information can be extracted through one of the object's accessors, which are described in Table \ref{tbl:mtpsdaccess}.  The public definition of the \code{mtpsd} class is given in Listing~\ref{lst:mtpsdclass}.
+\smallskip
+
+\index{mtpsd class@\texttt  {mtpsd} class!definition|(}
+\begin{lstlisting}[label=lst:mtpsdclass,caption=The \texttt{mtpsd} class]
+template <class T>
+class mtpsd {
+    // constructors/destructor
+    mtpsd(T *data, uint_t n, double nW);                       /*@\label{lst:mtpsdconstruct1}@*/
+    mtpsd(T *data, mtpsd_workspace work);                      /*@\label{lst:mtpsdconstruct2}@*/
+    mtpsd(T *data, const double *tapers, const double *lambda, /*@\label{lst:mtpsdcustomtaper1}\lstomitnum\lstskipnum{99}@*/
+             uint_t n, uint_t K);                              /*@\lstskipnum{-100}@*/
+    mtpsd(T *data, const double *tapers, const double *lambda, /*@\label{lst:mtpsdcustomtaper2}\lstomitnum\lstskipnum{99}@*/
+             mtpsd_workspace work);                            /*@\lstskipnum{-100}@*/
+    ~mtpsd();
+    
+    // computation routine
+    void compute();
+
+    // accessors
+    double operator()(uint_t i);           
+    const double* pS();
+    double operator()(uint_t k, uint_t i);
+    fftw_complex eig_coeff(uint_t k, uint_t i); 
+    double wt(uint_t k, uint_t i);       
+    double freq(uint_t i);                
+    double dof(uint_t i);                          
+    double conf_int(uint_t i, CONF_BOUND side, double p); 
+    double conf_factor(uint_t i, CONF_BOUND side, double p);
+    double lambda(uint_t k);
+    double taper(uint_t k, uint_t i);
+    double F_stat(uint_t i);  
+    double F_thresh(uint_t i, double p); 
+    bool F_test(uint_t i, double p); 
+    uint_t length();  
+    uint_t size(int dim);
+    mtpsd_workspace getinfo();
+};
+\end{lstlisting}\index{mtpsd class@\texttt  {mtpsd} class!compute@\texttt{compute()}}
+\index{mtpsd class@\texttt  {mtpsd} class!definition|)}
+
+\begin{table}
+    \caption{ Description of \texttt{mtpsd}\index{mtpsd class@\texttt{mtpsd} class!accessors} accessors \label{tbl:mtpsdaccess} }
+    \vspace*{-0.75em}
+    
+    \begin{tabular}{c}
+        \hline\hline\\[-0.75em]
+        \small
+        \parbox{\textwidth-12pt}{
+            \vspace*{-0.5em}
+            \settowidth{\bodyindent}{\texttt{mtpsd\_workspace}}
+            \begin{compactcodelist}
+                \codeitem{double}{operator()(uint\_t i)}
+                    Returns $\hat{S}(f_i)$, the power at the $i$th frequency (starting at $f_0=0$).
+                \codeitem{const double*}{pS()}
+                    Returns a pointer to the $\hat{S}$ array, so the data can be accessed directly.
+                \codeitem{double}{operator()(uint\_t k, uint\_t i)}
+                    Returns $\hat{S}_k(f_i)$, the $i$th value of eigenspectrum $k$. 
+                \codeitem{fftw\_complex}{eig\_coeff(uint\_t k, uint\_t ii)}
+                    Returns $\hat{J}_k(f_i)$, the $i$th value of eigencoefficient $k$.
+                \codeitem{double}{wt(uint\_t k, uint\_t i)}
+                    Returns the weight factor $w_k(f_i)$, where $\hat{S}=\sum w_k\hat{S}_k$.
+                \codeitem{double}{freq(uint\_t i)}
+                    Returns $f_i$, the $i$th frequency in Hz.  If the sampling frequency has not been specified, then $f$ is scaled to lie in the range $[0, 1]$.
+                \codeitem{double}{dof(uint\_t i)}
+                    Computes and returns $\nu(f_i)$ the equivalent degrees of freedom of $\hat{S}(f_i)$, assuming $\hat{S}\sim \frac{1}{\nu}S\chi^2_\nu$.
+                \codeitem{double}{conf\_int(uint\_t i, CONF\_BOUND side, double p)}
+                    Computes and returns the $p\times100\%$ confidence bound at frequency $f_i$, where \code{side} is either \code{UPPER} or \code{LOWER}.
+                \codeitem{double}{conf\_factor(uint\_t i, CONF\_BOUND side, double p)}
+                    Computes and returns either the lower or upper confidence factor $\nu/Q_\nu$.  The corresponding confidence bound is obtained by multiplying this factor by $\hat{S}$. Recall that for equal and eigenvalue weights, the confidence factor is independent of frequency.  
+                \codeitem{double}{lambda(uint\_t k)}
+                    Returns $\lambda_k$, the eigenvalue (energy concentration) of the $k$th taper.
+                \codeitem {double}{taper(uint\_t k, uint\_t i)}
+                    Returns $h_k(t_i)$, the $i$th value of the $k$th taper.
+                \codeitem {double}{F\_stat(uint\_t i)}
+                    Computes and returns the F-statistic at frequency $f_i$.
+                \codeitem {double}{F\_thresh(uint\_t i, double p)}
+                    Computes and returns the $p\times100\%$ threshold for the F-test at frequency $f_i$.  Recall that for equal or eigenvalue weights, this threshold is independent of frequency.
+                \codeitem {bool}{F\_test(uint\_t i, double p)}
+                    Computes the F-statistic and threshold, and returns \code{true} if the threshold is surpassed (i.e.~the frequency is deemed significant).
+                \codeitem {uint\_t}{length()}
+                    Returns $N$, the discrete length of the spectrum estimate (length of the frequency grid).
+                \codeitem {uint\_t}{size(int dim)}
+                    If \code{dim}=0, returns $N$.  If \code{dim}=1, returns $K$, the number of tapers used.
+                \codeitem {mtpsd\_workspace}{getinfo()}
+                    Returns a structure that contains all computation parameters used by the \code{mtpsd} class.
+            \end{compactcodelist}
+        }\\
+        \hline
+   \end{tabular}
+\end{table}
+
+\subsubsection{The \texttt{mtpsd\_workspace} Structure}
+
+\index{mtpsd\_workspace@\texttt{mtpsd\_workspace}|(}For more control over the multitaper parameters, a special \code{mtpsd\_workspace} structure is available.  It's definition is outlined in Listing \ref{lst:mtpsdwork}.  The first six members of the structure specify the multitaper computation parameters.  The last two are set automatically by the \code{mtpsd} class.  The structure has two constructor methods to initialize default values: one takes no inputs, and the other accepts the data length and the time-bandwidth product.
+\smallskip
+
+\begin{lstlisting}[label=lst:mtpsdwork,caption=The \texttt{mtpsd\_workspace} structure]
+enum WEIGHT_METHOD {ADAPT, EIGEN, EQUAL};
+enum DATA_TYPE {REAL_DATA, COMPLEX_DATA};
+
+struct mtpsd_workspace{
+    // should be set manually                                [default]       
+    uint_t n;                     // length of data             [0] 
+    double nW;                    // time-bandwidth product     [1]
+    WEIGHT_METHOD weight_method;  // type of weighting          [ADAPT]
+    uint_t N;                     // length of the DFTs         [n]
+    uint_t K;                     // number of tapers           [2nW-1]
+    double Fs;                    // sampling frequency         [1]
+    bool remove_mean;             // specifies if weighted      [true]
+                                  //   means to be removed
+    // set automatically
+    DATA_TYPE dtype;              // data type (real or complex)
+    uint_t nwk;                   // # independent wts per Sk
+
+    // constructors
+    mtpsd_workspace(): n(0), nW(1), weight_method(ADAPT), N(0),/*@\lstomitnum\lstskipnum{98}@*/
+                   K(2), Fs(1), remove_mean(true),             /*@\lstomitnum@*/
+                   dtype(REAL_DATA), nwk(0){ }                 /*@\lstskipnum{-100}@*/
+    mtpsd_workspace(uint_t n_, double nW_):  n(n_), nW(nW_),   /*@\lstomitnum\lstskipnum{100}@*/
+                   weight_method(ADAPT), N(n_), K(floor(2*nW_)-1),/*@\lstomitnum@*/
+                   Fs(1), remove_mean(true), dtype(REAL_DATA),   /*@\lstomitnum@*/
+                   nwk(n_){ }                                   /*@\lstskipnum{-103}@*/
+};
+\end{lstlisting}
+\bigskip
+
+Listing \ref{lst:workexample} shows an example of a workspace being used to initialize an \code{mtpsd} object.  If any of the supplied parameters are invalid, the \code{mtpsd} constructor will use the default values.  Alternatively, the \code{mtpsd\_workspace} can first be corrected by supplying it to the function:
+\begin{lstplainblock}
+void fix_workspace( mtpsd_workspace &myworkspace ).
+\end{lstplainblock}\index{fix\_workspace@\texttt{fix\_workspace()}}
+This will modify the invalid parameters in the supplied workspace directly.
+
+\pagebreak
+
+\begin{lstlisting}[label=lst:workexample,caption=Example using the \texttt{mtpsd\_workspace} ]
+#include "mtpsd.h"              /*@\lstomitnum@*/
+...                             /*@\lstskipnum{8}@*/
+{
+    fftw_complex *x;            // complex time series /*@\lstomitnum@*/
+    ...                         /*@\lstskipnum{7}\lstomitnum@*/
+
+    mtpsd_workspace params;
+
+    params.n=100;               // x has 100 points
+    params.nW=3.5;
+    params.weight_method=EIGEN; // eigenvalue weighting
+    params.N=512;               // 512-point spectrum
+    params.K=10;                
+    params.Fs=1000;             // 1 kHz
+    params.remove_mean=false;   // mean not removed
+
+    mtpsd spectrum<fftw_complex>(x, params);
+    try{
+        spectrum.compute();
+    }
+    catch(...){}                /*@\lstomitnum@*/
+    ...                         /*@\lstskipnum{8}@*/
+}
+\end{lstlisting}
+\index{mtpsd\_workspace@\texttt{mtpsd\_workspace}|)}
+
+\subsubsection{Supplying Custom Tapers}
+
+It is also possible to supply your own tapers when initializing an \code{mtpsd} object.  This allows the user to have full control over the way the tapers are computed.  The tapers are assumed to be rows of a \code{double} array stored in row-major format.  They can be passed, along with their energy concentrations, to one of the following two constructors:
+\smallskip
+
+\begin{lstplainblock}
+mtpsd(T *data, const double *tapers, const double *lambda, uint_t n, uint_t K)
+mtpsd(T *data, const double *tapers, const double *lambda, mtpsd_workspace work)
+\end{lstplainblock}
+\smallskip
+
+\noindent Ideally, the tapers should be discrete prolate spheroidal sequences, which can be calculated using the \code{dpss} library (covered in Section \ref{sec:dpss}).  This is how the \code{mtpsd} class computes tapers in the first two constructors (Listing \ref{lst:mtpsdclass}:\ref{lst:mtpsdconstruct1}--\ref{lst:mtpsdconstruct2}).  However, the algorithms will work for any tapers, as long as they are scaled to have a unit energy:
+$\|h_k\|^2 = 1\; \forall\, k$.  
+
+For non-DPSS tapers, the eigenvalue and adaptive weighting schemes are no longer guaranteed to reduce broad-band bias.  The eigenvalues can instead be interpreted as relative weights.  For example, an \code{mtpsd} object can be tricked into computing a periodogram\index{periodogram} by providing:
+\begin{align*}
+    h_0(i) & =\dfrac{1}{\sqrt{n}}, & \quad h_1(i)& =0, & \text{for } i=0,\ldots,n-1,\\
+    \lambda_0 &=1, & \lambda_1 &=0,
+\end{align*}
+and using the eigenvalue weighting scheme. \index{mtpsd class@\texttt  {mtpsd} class|)}
+
+\subsection{Advanced Use \label{sec:advanced}}
+
+The spectrum can also be computed by manually building arrays and calling methods in the \code{mtpsd} library to fill them.  This gives the user more control over memory management, and allows for more customization when it comes to weights and tolerances.
+
+Brief descriptions for the advanced methods are given in the following sections.  None of these methods create any substantial arrays on the heap; with the exception of a few local variables and one array of length $K$, all working memory, inputs and outputs are supplied by the user.  A list and description of the common variables, needed by several of the functions, is given in Table \ref{tbl:mtpsdcommonvars}.
+\bigskip
+
+\begin{table}[!hb]
+    \centering
+    \caption{Common variables in the \texttt{mtpsd} Library \label{tbl:mtpsdcommonvars}}
+    \renewcommand\arraystretch{1.3}
+    \vspace*{-1.5ex}
+    \small
+    \begin{tabular}{r@{\hspace{1.5ex}}p{5ex}@{\hspace{2ex}}p{0.65\textwidth}}
+        \hline\hline
+        \code{T*} & \code{x} & pointer to the time-series of which to compute the spectrum.  \code{T} is a template parameter that is either \code{double} or \code{fftw\_complex} (\code{double \_\_complex\_\_}).\\
+        \code{uint\_t} & \code{n} & the number of data points (unsigned integer).\\
+        \code{uint\_t} & \code{K} & the number of data tapers.\\
+        \code{const double*} & \code{h} & pointer to the array of length-$n$ tapers, stored in row-major format.  Each taper is assumed to occupy one row.  \code{h} should have $K\times n$ elements.\\
+        \code{const double*} & \code{l} & pointer to the array of energy concentrations (eigenvalues) of the tapers.  \code{l} should have length $K$.\\
+        \code{uint\_t} & \code{N} & the number of points in the frequency domain, greater than or equal to $n$.  This specifies the size of the FFT when computing the eigenspectra.\\
+        \code{double*} & \code{S} & pointer to the estimate of the power spectral density function.\\
+        \code{double*} & \code{Sk} & pointer to the eigenspectra array, stored in row-major format.\\
+        \code{fftw\_complex*} & \code{Jk} & pointer to the eigencoefficient array, stored in row-major format.\\
+        \code{uint\_t} & \code{nwk} & the number of independent weights per eigenspectrum.  For most purposes, \code{nwk} will either be $1$ (equal or eigenvalue weighting) or $N$ (adaptive).\\
+        \code{double*} & \code{wk} & pointer to the array of weights.  \code{wk} has size $K\times$\code{nwk}, stored in row-major format.  The weight \code{wk[k*nwk+i\%nwk]} is applied to \code{Sk[k*N+i]} when calculating \code{S[i]}.\\
+        \code{uint\_t} &\code{nv} & the number of elements in the degrees of freedom array.  This is usually $1$ (if $\nu$ is independent of frequency) or $N$ ($\nu$ is frequency-dependent), and should be equal to \code{nwk}. \\
+        \code{double*} & \code{v} & pointer to the degrees of freedom array.  \code{v} has length \code{nv}, where \code{v[i\%nv]} is the equivalent degrees of freedom of the estimate \code{S[i]}, assuming a scaled $\chi^2_\nu$ distribution.\\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsubsection{Computing the Eigencoefficients/Eigenspectra}
+
+Recall from Section \ref{sec:tapers} that the eigenspectra are just the squared-magnitude of the eigencoefficients:
+\begin{align}
+    \hat{S}_k(f) & = \|\hat{J}_k(f)\|^2.    \tag{\ref{eq:eigencoeffs}}
+\end{align}
+The eigencoefficients are needed by the F-test, and are useful for removing line frequencies (see, for example, \cite{percival:multitaper}).  Since the eigenspectra are readily obtained using Equation \ref{eq:eigencoeffs}, it is not necessary to store both arrays.  To potentially save memory, the code in this library has been written so that $\hat{S}_k$ is not explicitly required.
+
+Since the input data can be either real or complex, the methods for computing eigencoefficients and eigenspectra are written using templates, taking possible values \code{T=double} or \code{T=fftw_complex}:
+\medskip
+
+\begin{lstshortblock}
+template <class T>
+void eigencoeffs(T *x, uint_t n, const double *h, const double *l, 
+                 uint_t K, bool remove_mean, uint_t N, fftw_complex *Jk)
+\end{lstshortblock}\index{eigencoeffs@\texttt{eigencoeffs()}}
+\begin{fdescription}
+ Inputs: & \code{x, n, h, l, K, remove_mean, N}\\
+ Outputs: & \code{Jk}\\
+  & Computes the eigencoefficients using FFTs of length $N$.  The boolean variable \code{remove_mean} specifies whether or not to remove the weighted means\index{weighted mean} from the data before tapering (see section \ref{sec:removemean}).
+\end{fdescription}
+\medskip
+
+\index{eigenspectra@\texttt{eigenspectra()}}
+\begin{lstshortblock}
+template <class T>
+void eigenspectra(T *x, uint_t n, const double *h, const double *l, 
+                 uint_t K, bool remove_mean, uint_t N, fftw_complex *Jk, 
+                 double *Sk)
+\end{lstshortblock}
+\begin{fdescription}
+    Inputs: & \code{x, n, h, l, K, remove_mean, N}\\
+    Outputs: & \code{Jk, Sk}\\
+    & Computes the eigencoefficients \emph{and} eigenspectra using FFTs of length $N$.  The boolean variable \code{remove_mean} specifies whether or not to remove the weighted means from the data before tapering.
+\end{fdescription}
+\fdbottom
+
+\subsubsection{Computing the Spectrum}
+
+In order to estimate the overall spectrum, a set of weights is required.  These weights \emph{must} be normalized so that
+\begin{align*}
+    \sum_{k=0}^{K-1}w_k(i)=1, \quad \forall\,i.
+\end{align*}
+\noindent The array of weights, \code{wk}, is assumed to be a row-major representation of a two-dimensional array.  Each row consists of \code{nwk} elements, where \code{wk[k*nwk+i\%nwk]} is the weight applied to the $k$th eigenspectrum at the $i$th frequency.  Linear weighting schemes have \code{nwk=1}, since the weights are frequency independent.  Adaptive weighting has \code{nwk=N}.  
+
+The following methods compute the spectrum given a set of weights and either the eigencoefficients or the eigenspectra.
+\medskip
+
+\begin{lstshortblock}
+void combine_eig_coeffs( const fftw_complex *Jk, uint_t K, uint_t N, 
+                         const double *wk, uint_t nwk, double *S)
+void combine_eig_spec  ( const double *Sk, uint_t K, uint_t N, 
+                         const double *wk, uint_t nwk, double *S)
+\end{lstshortblock}\index{combine\_eig\_coeffs@\texttt{combine\_eig\_coeffs()}}\index{combine\_eig\_spec@\texttt{combine\_eig\_spec()}}
+\begin{fdescription}
+    Inputs: & \code{Jk} or \code{Sk, K, N, wk, nwk}\\
+    Outputs: & \code{S}\\
+    & Computes the multitaper spectrum estimate using the supplied weights and either the eigencoefficients or the eigenspectra.
+\end{fdescription}
+\medskip
+
+\begin{lstshortblock}
+void combine_eig_coeffs( const fftw_complex *Jk, uint_t K, uint_t N, 
+                         const double *wk, uint_t nwk, double *S, 
+                         double &diff)
+void combine_eig_spec  ( const double *Sk, uint_t K, uint_t N, 
+                         const double *wk, uint_t nwk, double *S, 
+                         double &diff)
+\end{lstshortblock}\index{combine\_eig\_spec@\texttt{combine\_eig\_spec()}}\index{combine\_eig\_coeffs@\texttt{combine\_eig\_coeffs()}}
+\begin{fdescription}
+    Inputs: & \code{Jk} or \code{Sk, K, N, wk, nwk, S}\\
+    Outputs: & \code{S, diff}\\
+    & Computes the multitaper spectrum estimate using the supplied weights, and returns the average absolute difference from the previous contents of \code{S}: \code{diff} = $\sum|\hat{S}_\text{new}-\hat{S}_\text{old}|/N$. Note that \code{S} is both an input \emph{and} an output.  This method is useful for adaptive weighting.
+\end{fdescription}
+\fdbottom
+
+\noindent For adaptive weighting\index{multitaper spectral estimator!adaptive weighting}, the weights and spectrum estimate are computed by a single routine.  The adaptive process will continue until the average change in the spectrum estimate is less than a supplied tolerance.
+\medskip
+
+\begin{lstshortblock}
+void adapt_wk( double varx, const double *l, const double *Sk, uint_t K, 
+               uint_t N, double tol, double *wk, double *S_init, 
+               double *S)
+void adapt_wk( double varx, const double *l, const fftw_complex *Jk, 
+               uint_t K, uint_t N, double tol, double *wk, 
+               double *S_init, double *S)
+void adapt_wk( double varx, const double *l, const fftw_complex *Jk, 
+               uint_t K, uint_t N, double tol, double *wk, 
+               double *S)
+void adapt_wk( double varx, const double *l, const double *Sk, uint_t K, 
+               uint_t N, double tol, double *wk, double *S)
+\end{lstshortblock}\index{adapt\_wk@\texttt{adapt\_wk()}}
+\begin{fdescription}
+    Inputs: & \code{varx, l, Jk} or \code{Sk, K, N, tol, (S_init)}\\
+    Outputs: & \code{wk}, \code{S}\\
+    & Adaptively computes the weights and the spectrum using Equations \eqref{eq:adaptweights} and \eqref{eq:adaptspec}.  \code{varx} is the estimated total power in \code{x}.  If the data is centred (or weighted means removed), then \code{varx} should be the variance of \code{x}.  Otherwise, \code{varx} should be the second non-central moment. Iterations will continue until the average absolute difference between updates (\code{diff} from \code{combine_eig_coeffs/spec}) is less than the supplied tolerance, \code{tol}.  If \code{S_init} is supplied, it is used as the initial estimate of the spectrum.  Otherwise, the initial estimate uses equal weighting of the first two eigenspectra.
+\end{fdescription}
+\fdbottom
+
+\subsubsection{Confidence Intervals}\index{confidence interval|(}
+
+For the confidence intervals, it is assumed $n$ is large enough that the individual eigenspectra follow scaled $\chi^2$ distributions.  The equivalent degrees of freedom for the combined estimate can be calculated from the vector of weights with the following:
+\medskip
+
+\begin{lstshortblock}
+void degrees_of_freedom( double *wk, uint_t nwk, uint_t K, double *v)
+\end{lstshortblock}\index{degrees of freedom@\texttt{degrees\_of\_freedom()}}
+\begin{fdescription}
+    Inputs: & \code{wk, nwk, K}\\
+    Outputs: & \code{v}\\
+    & Computes the equivalent degrees of freedom of the combined spectrum estimate, \code{S}.  \code{v} has length \code{nwk}, which is 1 for linear weighting schemes, and $N$ for adaptive.
+\end{fdescription}
+\fdbottom
+
+\noindent The degrees of freedom\index{degrees of freedom} are sometimes useful when analyzing the variance of the estimate.  The smaller the degrees of freedom, the larger the variance, making the estimate less stable.  However, since $\nu$ can easily be computed from the weights using Equation \eqref{eq:dof}, the methods have been written so that the array \code{v} need not be stored.  The following routines can be used to compute confidence intervals.
+\medskip
+
+\begin{lstshortblock}
+void confidence_factor( double p, double *v, uint_t nv , double *Cf)
+void confidence_factor( double p, double *wk, uint_t nwk, uint_t K, 
+                        double *Cf)
+\end{lstshortblock}\index{confidence\_factor@\texttt{confidence\_factor()}}
+\begin{fdescription}
+    Inputs: & \code{p, v} or \code{wk}, \code{nv} or \code{nwk, K}\\
+    Outputs: & \code{Cf}\\
+    & Computes the lower and upper confidence factors $\nu/Q_\nu$, corresponding to a \code{p}$\times100\%$ confidence interval.  \code{Cf} is an array of length $2\times$\code{nv}.  The first row contains the lower confidence factor, and the second contains the upper.  The confidence interval can then be generated from these factors with:\\
+    & \multicolumn{1}{c}{$\mathcal{C} = [\; $\code{ Cf[i\%nv]*S[i], Cf[i\%nv+nv]*S[i]} $ ]$.}
+\end{fdescription}
+\fdbottom
+\medskip
+
+\begin{lstshortblock}
+void confidence_interval( double p, double *S, uint_t N, double *v, 
+                          uint_t nv, double *Sc)
+void confidence_interval( double p, double *S, uint_t N, double *wk, 
+                          uint_t nwk, uint_t K, double *Sc)
+\end{lstshortblock}\index{confidence\_interval@\texttt{confidence\_interval()}}
+\begin{fdescription}
+    Inputs: & \code{p, S, N, v} or \code{wk}, \code{nv} or \code{nwk, K}\\
+    Outputs: & \code{Sc}\\
+    & Computes the lower and upper confidence bounds corresponding to a \code{p}$\times100\%$ interval.  \code{Sf} is an array of length $2\times$\code{N}.  The first row contains the lower confidence bound, and the second contains the upper.
+\end{fdescription}
+\fdbottom
+
+\noindent For linear weighting schemes, storing the confidence factors instead of the intervals can save memory: the factor is frequency-independent, so only two values need to be computed and stored.
+\index{confidence interval|)}
+
+\subsubsection{The F-test}
+
+\index{F-test|(}The implemented F-statistic is weight-dependent, which differs from Percival and Walden's version \cite{percival:multitaper}.  The same underlying assumptions are imposed, but the degrees of freedom and the estimated Fourier coefficients now incorporate non-equal weights.
+\medskip
+
+\begin{lstshortblock}
+void F_statistic( fftw_complex *Jk, uint_t N, uint_t K, double *wk, 
+                  uint_t nwk, double *h, uint_t n, double *F)
+\end{lstshortblock}\index{F\_statistic@\texttt{F\_statistic()}}
+\begin{fdescription}
+    Inputs: & \code{Jk, N, K, wk, nwk, K, h, n}\\
+    Outputs: & \code{F}\\
+    & Computes the F-statistic described in Section \ref{sec:ftest}, Equation \eqref{eq:Fdist}. \code{F} has length \code{N}.
+\end{fdescription}
+\medskip
+
+\begin{lstshortblock}
+void F_threshold( double p, double *wk, uint_t nwk, uint_t K, double *Fu)
+void F_threshold( double p, double *v, uint_t nv, double *Fu)
+\end{lstshortblock}\index{F\_threshold@\texttt{F\_threshold()}}
+\begin{fdescription}
+    Inputs: & \code{p, v} or \code{wk, nv} or \code{nwk, K}  \\
+    Outputs: & \code{Fu}\\
+    & Computes the \code{p}$\times100\%$ upper threshold for the F-test.  \code{Fu} has length \code{nv}.  This threshold may take the value \code{INFINITY} if the number of degrees of freedom is too small.  This can occur in adaptive weighting at a frequency deemed to be heavily biased.
+\end{fdescription}
+\fdbottom
+
+\noindent The actual F-test can be performed by checking if \code{F[i] > Fu[i\%nv]}.  When this inequality is satisfied, the $i$th frequency is deemed significant.
+\index{F-test|)}
+
+\subsubsection{An Advanced Example}
+
+The following is an example that uses the individual methods from this section to compute an adaptive spectrum estimate, confidence interval, and F-test.
+\smallskip
+
+\begin{lstlisting}[label=lst:mtpsdadvanced,caption=An \texttt{mtpsd} advanced example ]
+#include "mtpsd.h"              /*@\lstomitnum@*/
+...                             /*@\lstskipnum{8}@*/
+{
+    // allocate memory
+    double *x = new double[n];
+    double *h = new double[n*K];
+    double *l = new double[K]; 
+    double *S = new double[N];
+    fftw_complex *Jk = (fftw_complex *)fftw_malloc(sizeof(fftw_complex)*N*K);
+    double *wk = new double[N*K];   // adaptive, so nwk=N
+    double *Sc = new double[2*N];
+    double *F = new double[N];
+    double *Fu = new double[N];
+    
+    // Fill x, h, and l                                         /*@\lstomitnum\lstskipnum{7}@*/
+    ...                                                         /*@\lstomitnum@*/
+
+    // calculate eigencoefficients, removing the mean
+    eigencoeffs<double>(x, n, h, l, K, true, N, Jk);
+    
+    // build initial estimate
+    wk[0]=l[0]/(l[0]+l[1]);
+    wk[1]=l[1]/(l[0]+l[1]);
+    combine_eig_coeffs(Jk, 2, N, wk, 1, S);     //eigenvalue weights for S0,S1
+
+    // adaptive weighting
+    double varx = var<double>(x, n);            // mom2() if remove_mean=false
+    double tol = 1e-8;
+    adapt_wk( varx, l, Jk, K, N, tol, wk, S, S);  
+
+    // 95% confidence interval
+    confidence_interval(0.95, S, N, wk, N, K, Sc);
+
+    // 99% F-test
+    F_statistic(Jk, N, K, wk, N, h, n, F);          
+    F_threshold(0.99, wk, N, K, Fu);     
+
+    for (uint_t ii=0; ii<N; ii++){
+        if ( F[ii] > Fu[ii] )
+            printf( "Frequency %d is significant!\n", ii);
+    }                               /*@\lstomitnum\lstskipnum{7} @*/
+    ...                             /*@\lstomitnum@*/
+
+    // cleanup
+    delete [] x;  delete [] h;  delete [] l; delete [] S;  delete [] wk; 
+    delete [] Sc; delete [] F;  delete [] Fu;
+    fftw_free(Jk);    // fftw-safe memory freeing
+}
+\end{lstlisting} \index{mom2@\texttt  {mom2()}}\index{var@\texttt  {var()}}\index{eigencoeffs@\texttt{eigencoeffs()}}\index{combine\_eig\_coeffs@\texttt{combine\_eig\_coeffs()}}\index{confidence\_interval@\texttt{confidence\_interval()}}\index{adapt\_wk@\texttt{adapt\_wk()}}\index{F\_statistic@\texttt{F\_statistic()}}\index{F\_threshold@\texttt{F\_threshold()}}
+\index{mtpsd@\texttt{mtpsd}|)}

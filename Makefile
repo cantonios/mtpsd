@@ -1,9 +1,9 @@
 #
 # MTPSD Makefile
-# C. Antonio Sanchez
+# C. Antonio Sanchez <antonio@panthera.ca>
 # 
 
-MTPSD_VERSION=1.0
+MTPSD_VERSION=1.1
 
 #Checks for operating system, sets compiler
 OS_NAME=$(shell uname -s | tr A-Z a-z)
@@ -30,7 +30,7 @@ else
 	CC=g++
 endif
 
-CFLAGS=-c -g -O3 -Wall -Iinclude -Isrc/dpss -Isrc/mtpsd -Isrc/common
+CFLAGS=-c -g -O3 -fPIC -Wall -Iinclude -Isrc/dpss -Isrc/mtpsd -Isrc/common
 LDFLAGS:= -llapack -lfftw3 $(LDFLAGS)
 
 OCT_CC=mkoctfile
@@ -71,12 +71,16 @@ MTPSD_OCT_SRCS= src/mtpsd/mtpsd_octave.cpp
 MTPSD_OBJS=  $(patsubst src/%.cpp,build/%.o,$(MTPSD_SRCS))
 MTPSD_OCT_OBJS= build/mtpsd/mtpsd_octave.o
 
+MTPSD_TEST_SRCS = src/test/sine_test.cpp
+MTPSD_TEST_OBJS = build/test/sine_test.o
+
 MTPSD_OCT=   bin/mtpsd.oct
 MTPSD_LIB=   lib/libmtpsd.a
+MTPSD_TEST=  bin/sine_test
 
 .PHONY : clean install cleanall all oct lib dpss mtpsd dpss_lib mtpsd_lib dpss_oct mtpsd_oct
 
-all:  mtpsd_lib dpss_oct mtpsd_oct dpss_lib dpss_cmd
+all:  mtpsd_lib dpss_oct mtpsd_oct dpss_lib dpss_cmd test
 
 dpss: dpss_oct dpss_lib dpss_cmd
 
@@ -89,6 +93,8 @@ nooct: dpss_lib dpss_cmd mtpsd_lib
 lib: mtpsd_lib dpss_lib
 
 cmd: dpss_cmd
+
+test: $(MTPSD_TEST)
 
 dpss_oct:$(DPSS_OCT)
 
@@ -107,6 +113,10 @@ $(DPSS_CMD):$(COMMON_OBJS) $(DPSS_OBJS) $(DPSS_CMD_OBJS) $(DPSS_LIB)
 $(DPSS_OCT):$(COMMON_OBJS) $(DPSS_OBJS) $(DPSS_OCT_OBJS)
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@)		#makes the build path if required
 	$(OCT_CC) $(COMMON_OBJS) $(DPSS_OBJS) $(DPSS_OCT_OBJS) -o $@ $(OCT_LDFLAGS)
+
+$(MTPSD_TEST):$(MTPSD_TEST_OBJS) $(MTPSD_LIB)
+	@[ -d $(dir $@) ] || mkdir -p $(dir $@)		#makes the build path if required
+	$(CC) $(MTPSD_TEST_OBJS) -Llib -lmtpsd $(LDFLAGS) -o $@
 
 $(MTPSD_OCT):$(COMMON_OBJS) $(DPSS_OBJS) $(MTPSD_OBJS) $(MTPSD_OCT_OBJS)
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@)		#makes the build path if required
@@ -131,6 +141,10 @@ build/dpss/%.o:src/dpss/%.cpp $(COMMON_HDRS) $(DPSS_HDRS)
 	$(CC) $(CFLAGS) $< -o $@
 
 build/mtpsd/%.o:src/mtpsd/%.cpp $(COMMON_HDRS) $(MTPSD_HDRS)
+	@[ -d $(dir $@) ] || mkdir -p $(dir $@)		#makes the build path if required
+	$(CC) $(CFLAGS) $< -o $@
+
+build/test/%.o:src/test/%.cpp
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@)		#makes the build path if required
 	$(CC) $(CFLAGS) $< -o $@
 

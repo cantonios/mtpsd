@@ -12,5 +12,30 @@
 *.la
 *.a
 
+# Latex intermediates
+*.blg
+*.bbl
+*.idx
+*.ilg
+*.ind
+*.aux
+*.lof
+*.log
+*.lol
+*.lot
+*.out
+*.toc
+
+# Eclipse
+.project
+.cproject
+
+# backup
+*~
+*.backup
+*.bak
+
+
 # build directories
 build
+bin

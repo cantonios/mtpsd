@@ -31,6 +31,8 @@ along with MTPSD.  If not, see <http://www.gnu.org/licenses/>.
 #include "applied_stats.h"
 #include <cmath>
 
+namespace stats {
+
 template <class T> T abs ( T a ) { return (0<a)?a:-a; }
 
 // Inverts chi-squared CDF with v degrees of freedom
@@ -241,4 +243,6 @@ double gamma_int_fraction(double x, double n){
     gc=1.0-gc*c;
     
     return gc;
+}
+
 }

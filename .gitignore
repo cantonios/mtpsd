@@ -39,3 +39,14 @@
 # build directories
 build
 bin
+
+# binaries
+*.oct
+*.exe
+
+# Archives     
+*.tar
+*.gz
+
+#Octave dumps
+octave-core

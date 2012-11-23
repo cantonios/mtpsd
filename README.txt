@@ -1,6 +1,6 @@
         MTPSD - Multi-Taper Power Spectral Density estimator
 
-Copyright (c) 2010 Antonio Sanchez <antonio@eigenspectrum.com>
+Copyright (c) 2012 Antonio Sanchez <antonio@eigenspectrum.com>
 
 Licence: GPLv3
 
@@ -27,4 +27,4 @@ Copy 'include/*.h' to your system's include directory
 Copy 'bin/mtpsd.oct' and 'bin/dpss.oct' somewhere where Octave can find them
 Copy 'bin/dpss' to your system's bin directory
 
-See the mtpsd documentation for more options/details.
+See the MTPSD documentation (pdf) for more options/details.

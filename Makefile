@@ -78,19 +78,34 @@ MTPSD_OCT=   bin/mtpsd.oct
 MTPSD_LIB=   lib/libmtpsd.a
 MTPSD_TEST=  bin/sine_test
 
-.PHONY : clean install cleanall all oct lib dpss mtpsd dpss_lib mtpsd_lib dpss_oct mtpsd_oct
+MTCPSD_HDRS= include/mtcpsd.h \
+	     include/applied_stats.h
+	     
+MTCPSD_SRCS=  src/mtpsd/mtcpsd.cpp \
+             src/common/applied_stats.cpp
+MTCPSD_OCT_SRCS= src/mtpsd/mtcpsd_octave.cpp
 
-all:  mtpsd_lib dpss_oct mtpsd_oct dpss_lib dpss_cmd test
+MTCPSD_OBJS=  $(patsubst src/%.cpp,build/%.o,$(MTCPSD_SRCS))
+MTCPSD_OCT_OBJS= build/mtpsd/mtcpsd_octave.o
+
+MTCPSD_OCT=   bin/mtcpsd.oct
+MTCPSD_LIB=   lib/libmtcpsd.a
+
+.PHONY : clean install cleanall all oct lib dpss mtpsd mtcpsd dpss_lib mtpsd_lib mtcpsd_lib dpss_oct mtpsd_oct mtcpsd_oct
+
+all:  mtpsd_lib dpss_oct mtpsd_oct dpss_lib dpss_cmd test mtcpsd_lib mtcpsd_oct
 
 dpss: dpss_oct dpss_lib dpss_cmd
 
 mtpsd: mtpsd_oct mtpsd_lib
 
+mtcpsd: mtcpsd_lib mtcpsd_oct
+
 oct: mtpsd_oct dpss_oct
 
 nooct: dpss_lib dpss_cmd mtpsd_lib
 
-lib: mtpsd_lib dpss_lib
+lib: mtpsd_lib dpss_lib mtcpsd_lib
 
 cmd: dpss_cmd
 
@@ -103,6 +118,10 @@ mtpsd_oct:$(MTPSD_OCT)
 dpss_lib:$(DPSS_LIB)
 
 mtpsd_lib:$(MTPSD_LIB)
+
+mtcpsd_lib:$(MTCPSD_LIB)
+
+mtcpsd_oct:$(MTCPSD_OCT)
 
 dpss_cmd:$(DPSS_CMD)
 
@@ -127,6 +146,15 @@ $(MTPSD_LIB):$(COMMON_OBJS) $(DPSS_OBJS) $(MTPSD_OBJS)
 	ar rcs $@ $(COMMON_OBJS) $(DPSS_OBJS) $(MTPSD_OBJS)
 	ranlib $@
 
+$(MTCPSD_LIB):$(COMMON_OBJS) $(DPSS_OBJS) $(MTCPSD_OBJS)
+	@[ -d $(dir $@) ] || mkdir -p $(dir $@)		#makes the build path if required
+	ar rcs $@ $(COMMON_OBJS) $(DPSS_OBJS) $(MTCPSD_OBJS)
+	ranlib $@
+	
+$(MTCPSD_OCT):$(COMMON_OBJS) $(DPSS_OBJS) $(MTCPSD_OBJS) $(MTCPSD_OCT_OBJS)
+	@[ -d $(dir $@) ] || mkdir -p $(dir $@)		#makes the build path if required
+	$(OCT_CC) $(COMMON_OBJS) $(DPSS_OBJS) $(MTCPSD_OBJS) $(MTCPSD_OCT_OBJS) -o $@ $(OCT_LDFLAGS)
+
 $(DPSS_LIB):$(COMMON_OBJS) $(DPSS_OBJS)
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@)		#makes the build path if required
 	ar rcs $@ $(COMMON_OBJS) $(DPSS_OBJS)
@@ -140,7 +168,7 @@ build/dpss/%.o:src/dpss/%.cpp $(COMMON_HDRS) $(DPSS_HDRS)
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@)		#makes the build path if required
 	$(CC) $(CFLAGS) $< -o $@
 
-build/mtpsd/%.o:src/mtpsd/%.cpp $(COMMON_HDRS) $(MTPSD_HDRS)
+build/mtpsd/%.o:src/mtpsd/%.cpp $(COMMON_HDRS) $(MTPSD_HDRS) $(MTCPSD_HDRS)
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@)		#makes the build path if required
 	$(CC) $(CFLAGS) $< -o $@
 
@@ -156,7 +184,7 @@ clean:
 	rm -rf ${COMMON_OBJS} $(DPSS_OBJS) $(DPSS_OCT_OBJS) $(DPSS_CMD_OBJS) $(MTPSD_OBJS) $(MTPSD_OCT_OBJS)
 
 cleanall: clean
-	rm -rf ${DPSS_LIB} $(MTPSD_LIB) $(DPSS_OCT) $(MTPSD_OCT) $(DPSS_CMD)
+	rm -rf ${DPSS_LIB} $(MTPSD_LIB) $(MTPSD_OCT) $(MTCPSD_LIB) $(DPSS_OCT) $(MTPSD_OCT) $(DPSS_CMD)
 
 install:
 	@echo "\n  WARNING: manual installation required!! \n  All C++ libraries are in lib/, and oct-files and executables in bin/\n"

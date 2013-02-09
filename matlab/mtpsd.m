@@ -1,13 +1,18 @@
-function [S, Sc, fb, Cf, F] = mtpsdwf(x,NW, ntaper, NFFT, method)
+function [S, f, Sc] = mtpsd(x, NW, ntaper, NFFT, method, pconf)
 %Computes the two-sided multi-taper power spectral density
+% Inputs:
+%   x the data
+%   NW time-bandwidth product (2.5 is a good value)
+%   ntaper number of tapers (2*NW-1 is good)
+%   NFFT number of points to use for FFT
+%   method equal, eigen or adapt for weighting
+%   pconf confidence probability
 
-    if (size(x,1)==1)
-        x=transpose(x);     %don't want to change complex component
-    end
-
-    N=length(x);
-    pconf=0.95;
-
+% Outputs:
+%   S the power spectral density
+%   f the frequencies
+%   Sc confidence intervals
+    
     switch(nargin)
         case 1
             method='adapt';
@@ -18,7 +23,6 @@ function [S, Sc, fb, Cf, F] = mtpsdwf(x,NW, ntaper, NFFT, method)
             ntaper=2*NW-1;
         case 3
             method='adapt';
-            NFFT=4*N;
         case 4
             method='adapt';
         case 5
@@ -27,14 +31,27 @@ function [S, Sc, fb, Cf, F] = mtpsdwf(x,NW, ntaper, NFFT, method)
             return;
     end
     
+    N=length(x);        
+    
+    if (nargin < 6)
+        pconf = 0.98;
+    end
+    if (isempty(NFFT))
+        NFFT = N;
+    end
+    
+    if (size(x,1)==1)
+        x=transpose(x);     %don't want to change complex component
+    end
+    
     repk=ones(1,ntaper);            %used for duplicating vector in ntaper columns
     repn=ones(N,1);                 %used for duplicating vector in N rows
     reps=ones(NFFT,1);              %used for duplicating vector in NFFT rows
     
     [h,l]=dpss(N,NW,ntaper);        %Data taper
-    H=fft(h,NFFT,1);                %fourier of DPSS for F-Test
-    H=H/N;
-
+    
+    f = linspace(0, 1, NFFT+1);
+    f = f(1:end-1);
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %    Remove Mean to reduce bias
@@ -66,7 +83,7 @@ function [S, Sc, fb, Cf, F] = mtpsdwf(x,NW, ntaper, NFFT, method)
     Sk=abs(Jk).^2;     
 
     
-    if (strcmp(method,'unity')==1)
+    if (strcmp(method,'equal')==1)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   Unit Weighting
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -114,33 +131,29 @@ function [S, Sc, fb, Cf, F] = mtpsdwf(x,NW, ntaper, NFFT, method)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     S=sum(wk.*Sk,2);
-    
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  F Test
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    [fb Cf ft F]=linefreq(S,Jk,wk,H,0.99);
-    %linefreq2(S,Jk,H,0.99);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  Confidence intervals
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    p=(1-pconf)/2;
-    v=2./sum(wk.^2,2);  
-    
-    %correct degrees of freedom at zero and fn
-%     v(1)=v(1)/2;
-%     if (mod(NFFT,2)==0)
-%         v(NFFT/2+1)=v(NFFT/2+1)/2;
-%     end
-    
-    Ql=chisqinv(p,v);
-    Qu=chisqinv(1-p,v);
-    
-    Sl=v.*S./Qu;
-    Su=v.*S./Ql;
-    
-    Sc=[Sl Su];
+    if (nargout > 2)
 
+        p=(1-pconf)/2;
+        v=2./sum(wk.^2,2);  
+
+        %correct degrees of freedom at zero and fn
+    %     v(1)=v(1)/2;
+    %     if (mod(NFFT,2)==0)
+    %         v(NFFT/2+1)=v(NFFT/2+1)/2;
+    %     end
+
+        Ql=chisqinv(p,v);
+        Qu=chisqinv(1-p,v);
+
+        Sl=v.*S./Qu;
+        Su=v.*S./Ql;
+
+        Sc=[Sl Su];
+        
+    end
 end
